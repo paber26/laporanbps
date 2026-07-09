@@ -139,4 +139,11 @@
             sel.addEventListener('change', () => { btn.href = base + '?ukuran=' + sel.value; });
         })();
     </script>
+
+    @if (session('clear_draft_key'))
+        {{-- Laporan baru saja tersimpan: bersihkan draft form terkait dari browser. --}}
+        <script>
+            try { localStorage.removeItem(@json(session('clear_draft_key'))); } catch (e) {}
+        </script>
+    @endif
 </x-app-layout>

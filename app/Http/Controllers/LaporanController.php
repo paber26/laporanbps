@@ -58,7 +58,8 @@ class LaporanController extends Controller
 
         return redirect()
             ->route('laporan.show', $laporan)
-            ->with('status', 'Laporan berhasil dibuat.');
+            ->with('status', 'Laporan berhasil dibuat.')
+            ->with('clear_draft_key', 'laporan_draft:create');
     }
 
     /**
@@ -106,7 +107,8 @@ class LaporanController extends Controller
 
         return redirect()
             ->route('laporan.show', $laporan)
-            ->with('status', 'Laporan berhasil diperbarui.');
+            ->with('status', 'Laporan berhasil diperbarui.')
+            ->with('clear_draft_key', 'laporan_draft:edit:'.$laporan->id);
     }
 
     /**
@@ -159,6 +161,41 @@ class LaporanController extends Controller
     }
 
     /**
+     * Unggah 1 foto dokumentasi sebagai draft (langsung tersimpan ke storage
+     * di dokumentasi/tmp/{userId}) sebelum laporan disubmit. Dipanggil via AJAX.
+     */
+    public function uploadDraft(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $dir = 'dokumentasi/tmp/'.$request->user()->id;
+        $path = $request->file('file')->store($dir, 'public');
+
+        return response()->json([
+            'path' => $path,
+            'url' => Storage::disk('public')->url($path),
+            'name' => $request->file('file')->getClientOriginalName(),
+        ]);
+    }
+
+    /**
+     * Hapus 1 foto draft (hanya berkas milik pengguna di folder tmp-nya).
+     */
+    public function deleteDraft(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $path = (string) $request->input('path');
+        $prefix = 'dokumentasi/tmp/'.$request->user()->id.'/';
+
+        if (str_starts_with($path, $prefix) && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Validasi field laporan.
      *
      * @return array<string, mixed>
@@ -183,6 +220,7 @@ class LaporanController extends Controller
 
             'dokumentasi' => ['nullable', 'array'],
             'dokumentasi.*.file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'dokumentasi.*.path' => ['nullable', 'string', 'max:255'],
             'dokumentasi.*.keterangan' => ['nullable', 'string', 'max:255'],
         ]);
     }
@@ -209,16 +247,33 @@ class LaporanController extends Controller
     protected function storeDokumentasi(Request $request, Laporan $laporan): void
     {
         $mulai = (int) $laporan->dokumentasis()->max('urutan');
+        $disk = Storage::disk('public');
+        $tmpPrefix = 'dokumentasi/tmp/'.$request->user()->id.'/';
 
         // Gunakan key asli dari request agar akses file (dokumentasi.$i.file) tepat,
         // meski indeks tidak berurutan karena ada baris yang dihapus di form.
         foreach ($request->input('dokumentasi', []) as $i => $dok) {
+            $path = null;
+
+            // 1) Unggahan langsung (fallback tanpa JS / AJAX gagal).
             $file = $request->file("dokumentasi.$i.file");
-            if (! $file) {
-                continue;
+            if ($file) {
+                $path = $file->store('dokumentasi/'.$laporan->id, 'public');
+            }
+            // 2) Foto draft yang sudah terunggah lebih dulu: pindahkan dari tmp.
+            elseif (! empty($dok['path'])) {
+                $src = $dok['path'];
+                // Hanya izinkan memindahkan berkas draft milik pengguna ini.
+                if (str_starts_with($src, $tmpPrefix) && $disk->exists($src)) {
+                    $path = 'dokumentasi/'.$laporan->id.'/'.basename($src);
+                    $disk->makeDirectory('dokumentasi/'.$laporan->id);
+                    $disk->move($src, $path);
+                }
             }
 
-            $path = $file->store('dokumentasi/'.$laporan->id, 'public');
+            if (! $path) {
+                continue;
+            }
 
             $laporan->dokumentasis()->create([
                 'image_path' => $path,

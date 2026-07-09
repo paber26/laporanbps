@@ -186,8 +186,26 @@
             </div>
         @endif
 
-        <div id="dok-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP, maks 5MB per foto. Foto yang dipilih otomatis tersimpan di browser dan tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
+        <div id="dok-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {{-- Saat validasi gagal, bangun ulang baris foto dari input sebelumnya (server-side). --}}
+            @foreach (old('dokumentasi', []) as $i => $d)
+                @php $dp = $d['path'] ?? ''; $durl = $dp ? \Storage::url($dp) : ''; @endphp
+                <div class="dok-row border rounded-lg p-4 bg-gray-50"
+                    @if ($dp) data-path="{{ $dp }}" data-url="{{ $durl }}" data-name="{{ basename($dp) }}" @endif>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-gray-600">Foto</span>
+                        <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
+                    </div>
+                    <input type="file" name="dokumentasi[{{ $i }}][file]" accept="image/*" class="dok-file block w-full text-sm mb-2">
+                    <input type="hidden" class="dok-path" name="dokumentasi[{{ $i }}][path]" value="{{ $dp }}">
+                    <img class="dok-preview {{ $dp ? '' : 'hidden' }} mb-2 h-32 w-full object-cover rounded border" src="{{ $durl }}" alt="preview foto">
+                    <p class="dok-saved-note {{ $dp ? '' : 'hidden' }} text-xs text-emerald-600 mb-2">✓ Gambar terunggah ke server — tetap ada setelah refresh.</p>
+                    <p class="dok-uploading hidden text-xs text-gray-500 mb-2">Mengunggah…</p>
+                    <input type="text" name="dokumentasi[{{ $i }}][keterangan]" value="{{ $d['keterangan'] ?? '' }}" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                </div>
+            @endforeach
+        </div>
+        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP, maks 5MB per foto. Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
     </div>
 
     {{-- ===================== TEMPLATE (untuk JS repeater) ===================== --}}
@@ -224,9 +242,11 @@
                 <span class="text-sm font-medium text-gray-600">Foto</span>
                 <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
             </div>
-            <input type="file" name="dokumentasi[__I__][file]" accept="image/*" class="block w-full text-sm mb-2">
+            <input type="file" name="dokumentasi[__I__][file]" accept="image/*" class="dok-file block w-full text-sm mb-2">
+            <input type="hidden" class="dok-path" name="dokumentasi[__I__][path]">
             <img class="dok-preview hidden mb-2 h-32 w-full object-cover rounded border" alt="preview foto">
-            <p class="dok-saved-note hidden text-xs text-emerald-600 mb-2">✓ Gambar tersimpan otomatis — tetap ada setelah refresh.</p>
+            <p class="dok-saved-note hidden text-xs text-emerald-600 mb-2">✓ Gambar terunggah ke server — tetap ada setelah refresh.</p>
+            <p class="dok-uploading hidden text-xs text-gray-500 mb-2">Mengunggah…</p>
             <input type="text" name="dokumentasi[__I__][keterangan]" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
         </div>
     </template>
@@ -250,10 +270,15 @@
 <script>
 (function () {
     let uraianIndex = {{ count($uraianRows) }};
-    let dokIndex = 0;
+    let dokIndex = {{ count(old('dokumentasi', [])) }};
 
     // Kunci draft: beda antara form buat-baru dan form edit tiap laporan.
     const DRAFT_KEY = @json($isEdit ? 'laporan_draft:edit:'.$laporan->id : 'laporan_draft:create');
+    const CSRF = @json(csrf_token());
+    const UPLOAD_URL = @json(route('laporan.dokumentasi.draft'));
+    const DELETE_URL = @json(route('laporan.dokumentasi.draft.delete'));
+    // Apakah halaman ini render ulang karena validasi gagal (ada input lama)?
+    const SERVER_HAS_OLD = {{ $errors->any() ? 'true' : 'false' }};
 
     const hasCK = typeof window.ClassicEditor !== 'undefined';
     const form = document.getElementById('laporan-form');
@@ -264,53 +289,33 @@
 
     let restoring = false; // cegah autosave saat sedang memulihkan draft
 
-    // ====== Penyimpanan gambar draft di IndexedDB (biner, kuota besar) ======
-    // Foto yang dipilih langsung disimpan agar tetap muncul setelah refresh
-    // dan otomatis dimasukkan kembali ke input file saat halaman dibuka lagi.
-    const IDB = {
-        _db: null,
-        open() {
-            return new Promise((res, rej) => {
-                if (this._db) return res(this._db);
-                const rq = indexedDB.open('laporan_draft_files', 1);
-                rq.onupgradeneeded = e => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'id' });
-                };
-                rq.onsuccess = e => { this._db = e.target.result; res(this._db); };
-                rq.onerror = e => rej(e);
-            });
-        },
-        async put(rec) { const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put(rec); tx.oncomplete = () => res(); tx.onerror = e => rej(e); }); },
-        async get(id) { const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readonly'); const rq = tx.objectStore('files').get(id); rq.onsuccess = () => res(rq.result); rq.onerror = e => rej(e); }); },
-        async del(id) { const db = await this.open(); return new Promise(res => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id); tx.oncomplete = () => res(); }); },
-        async delByDraft(key) { const db = await this.open(); return new Promise(res => { const tx = db.transaction('files', 'readwrite'); const rq = tx.objectStore('files').openCursor(); rq.onsuccess = e => { const c = e.target.result; if (c) { if (c.value.draftKey === key) c.delete(); c.continue(); } }; tx.oncomplete = () => res(); }); },
-    };
-
-    function showPreview(row, url) {
+    // ====== Foto langsung diunggah ke storage Laravel (draft) ======
+    // Saat file dipilih, foto diunggah ke server (dokumentasi/tmp/{user}) sehingga
+    // tetap ada setelah refresh dan ikut tersimpan saat laporan disubmit.
+    function setRowFile(row, path, url) {
+        row.dataset.path = path || '';
+        row.dataset.url = url || '';
+        const hidden = row.querySelector('.dok-path');
+        if (hidden) hidden.value = path || '';
         const img = row.querySelector('.dok-preview');
         const note = row.querySelector('.dok-saved-note');
-        if (img) { img.src = url; img.classList.remove('hidden'); }
-        if (note) note.classList.remove('hidden');
+        if (img && url) { img.src = url; img.classList.remove('hidden'); }
+        if (note) note.classList.toggle('hidden', !path);
     }
 
-    function attachFileToRow(row, blob, name, type) {
-        const input = row.querySelector('input[type=file]');
-        if (input) {
-            try {
-                const file = new File([blob], name || 'foto.jpg', { type: type || blob.type || 'image/jpeg' });
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                input.files = dt.files; // masukkan kembali file agar tetap ikut ter-submit
-            } catch (e) { /* DataTransfer tak didukung: preview tetap tampil */ }
-        }
-        showPreview(row, URL.createObjectURL(blob));
+    function toggleUploading(row, on) {
+        const el = row.querySelector('.dok-uploading');
+        if (el) el.classList.toggle('hidden', !on);
     }
 
-    async function loadDokFile(row, fileId, name, type) {
+    async function deleteServerFile(path) {
+        if (!path) return;
         try {
-            const rec = await IDB.get(fileId);
-            if (rec && rec.blob) attachFileToRow(row, rec.blob, name || rec.name, type || rec.type);
+            await fetch(DELETE_URL, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ path }),
+            });
         } catch (e) { /* abaikan */ }
     }
 
@@ -318,15 +323,32 @@
         const row = input.closest('.dok-row');
         const file = input.files && input.files[0];
         if (!row || !file) return;
-        const id = DRAFT_KEY + ':' + Date.now() + '_' + Math.random().toString(36).slice(2);
-        if (row.dataset.fileId) { IDB.del(row.dataset.fileId); }
+
+        // Hapus foto lama baris ini (bila mengganti file).
+        if (row.dataset.path) deleteServerFile(row.dataset.path);
+
+        toggleUploading(row, true);
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('_token', CSRF);
         try {
-            await IDB.put({ id, draftKey: DRAFT_KEY, blob: file, name: file.name, type: file.type });
-            row.dataset.fileId = id;
-            row.dataset.fileName = file.name;
-            row.dataset.fileType = file.type;
-            showPreview(row, URL.createObjectURL(file));
-        } catch (e) { console.error('Gagal menyimpan gambar draf:', e); }
+            const res = await fetch(UPLOAD_URL, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                body: fd,
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            row.dataset.name = data.name || file.name;
+            setRowFile(row, data.path, data.url);
+            // Kosongkan input file agar tidak terunggah dua kali saat submit (pakai path).
+            input.value = '';
+        } catch (e) {
+            console.error('Gagal mengunggah foto:', e);
+            alert('Gagal mengunggah foto. Coba lagi.');
+        } finally {
+            toggleUploading(row, false);
+        }
         scheduleSave();
     }
 
@@ -382,12 +404,10 @@
             if (ket) ket.value = data.keterangan || '';
         }
         dokContainer.appendChild(node);
-        // Pulihkan gambar dari IndexedDB bila draft menyimpannya.
-        if (data && data.fileId) {
-            node.dataset.fileId = data.fileId;
-            node.dataset.fileName = data.fileName || '';
-            node.dataset.fileType = data.fileType || '';
-            loadDokFile(node, data.fileId, data.fileName, data.fileType);
+        // Pulihkan foto yang sudah terunggah ke server.
+        if (data && data.path) {
+            node.dataset.name = data.name || '';
+            setRowFile(node, data.path, data.url);
         }
         return node;
     }
@@ -416,7 +436,7 @@
         }
         if (e.target.classList.contains('btn-remove-dok')) {
             const drow = e.target.closest('.dok-row');
-            if (drow.dataset.fileId) { IDB.del(drow.dataset.fileId); }
+            if (drow.dataset.path) { deleteServerFile(drow.dataset.path); }
             drow.remove();
             scheduleSave();
         }
@@ -447,9 +467,9 @@
             const ket = row.querySelector('[name$="[keterangan]"]');
             data.dokumentasi.push({
                 keterangan: ket ? ket.value : '',
-                fileId: row.dataset.fileId || '',
-                fileName: row.dataset.fileName || '',
-                fileType: row.dataset.fileType || '',
+                path: row.dataset.path || '',
+                url: row.dataset.url || '',
+                name: row.dataset.name || '',
             });
         });
         return data;
@@ -458,7 +478,7 @@
     function isEmptyDraft(d) {
         const anyField = SIMPLE_FIELDS.some(n => (d.fields[n] || '').trim() !== '');
         const anyUraian = d.uraians.some(u => (u.uraian_text || '').trim() !== '' || (u.tanggal_kegiatan || '') !== '' || (u.jam_mulai || '') !== '' || (u.jam_selesai || '') !== '');
-        const anyDok = d.dokumentasi.some(k => (k.keterangan || '').trim() !== '' || (k.fileId || '') !== '');
+        const anyDok = d.dokumentasi.some(k => (k.keterangan || '').trim() !== '' || (k.path || '') !== '');
         return !(anyField || anyUraian || anyDok);
     }
 
@@ -485,7 +505,6 @@
 
     function clearDraft() {
         localStorage.removeItem(DRAFT_KEY);
-        try { IDB.delByDraft(DRAFT_KEY); } catch (e) { /* abaikan */ }
         statusEl.textContent = '';
         clearBtn.classList.add('hidden');
     }
@@ -514,7 +533,7 @@
         uraianContainer.innerHTML = '';
         (d.uraians && d.uraians.length ? d.uraians : [null]).forEach(u => addUraianRow(u));
 
-        // Bangun ulang baris dokumentasi + pulihkan gambar dari IndexedDB.
+        // Bangun ulang baris dokumentasi + pulihkan foto dari storage server.
         dokContainer.innerHTML = '';
         (d.dokumentasi || []).forEach(k => addDokRow(k));
 
@@ -534,12 +553,13 @@
     form.addEventListener('input', scheduleSave);
     form.addEventListener('change', scheduleSave);
 
-    // Sinkronkan editor -> textarea & bersihkan draft saat submit berhasil dikirim.
+    // Sinkronkan editor -> textarea sebelum submit. Draft TIDAK dihapus di sini —
+    // pembersihan dilakukan setelah simpan sukses (via flash di halaman preview),
+    // agar data tetap aman bila validasi gagal.
     form.addEventListener('submit', function () {
         document.querySelectorAll('.uraian-editor').forEach(ta => {
             if (ta._editor) ta._editor.updateSourceElement();
         });
-        clearDraft();
     });
 
     // Auto-fill info petugas & pembiayaan
@@ -571,9 +591,10 @@
     pemSel.addEventListener('change', showPem);
 
     // ============ INISIALISASI ============
-    const restored = restore();
+    // Jika halaman render ulang karena validasi gagal, pakai data server (old())
+    // dan jangan pulihkan dari draft agar tidak dobel.
+    const restored = SERVER_HAS_OLD ? false : restore();
     if (!restored) {
-        // Tidak ada draft: inisialisasi editor pada baris bawaan server.
         uraianContainer.querySelectorAll('.uraian-editor').forEach(initEditor);
     }
     showPeg();

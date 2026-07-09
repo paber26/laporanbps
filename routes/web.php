@@ -18,6 +18,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('laporan/{laporan}/pdf', [LaporanController::class, 'exportPdf'])->name('laporan.pdf');
     Route::get('laporan/{laporan}/word', [LaporanController::class, 'exportWord'])->name('laporan.word');
 
+    // Unggah/hapus foto dokumentasi sebagai draft (langsung tersimpan ke storage
+    // sebelum laporan disubmit) via AJAX.
+    Route::post('laporan-dokumentasi/draft', [LaporanController::class, 'uploadDraft'])->name('laporan.dokumentasi.draft');
+    Route::delete('laporan-dokumentasi/draft', [LaporanController::class, 'deleteDraft'])->name('laporan.dokumentasi.draft.delete');
+
     Route::resource('laporan', LaporanController::class);
     Route::resource('master-pembiayaan', MasterPembiayaanController::class)
         ->parameters(['master-pembiayaan' => 'masterPembiayaan'])
