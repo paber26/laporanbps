@@ -151,8 +151,11 @@
                     </div>
                     <div>
                         <label class="text-xs text-gray-500">Uraian Kegiatan</label>
+                        {{-- Tanpa atribut `required`: CKEditor menyembunyikan textarea sehingga
+                             validasi `required` bawaan browser akan memblokir submit. Validasi
+                             tetap dijalankan di sisi server. --}}
                         <textarea class="uraian-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"
-                            name="uraians[{{ $i }}][uraian_text]" rows="6" required>{{ $row['uraian_text'] ?? '' }}</textarea>
+                            name="uraians[{{ $i }}][uraian_text]" rows="6">{{ $row['uraian_text'] ?? '' }}</textarea>
                     </div>
                 </div>
             @endforeach
@@ -210,7 +213,7 @@
             </div>
             <div>
                 <label class="text-xs text-gray-500">Uraian Kegiatan</label>
-                <textarea class="uraian-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" name="uraians[__I__][uraian_text]" rows="6" required></textarea>
+                <textarea class="uraian-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" name="uraians[__I__][uraian_text]" rows="6"></textarea>
             </div>
         </div>
     </template>
@@ -249,7 +252,11 @@
             .create(textarea, {
                 toolbar: ['heading', '|', 'bold', 'italic', '|', 'bulletedList', 'numberedList', '|', 'outdent', 'indent', '|', 'undo', 'redo']
             })
-            .then(editor => { textarea._editor = editor; })
+            .then(editor => {
+                textarea._editor = editor;
+                // Selalu jaga textarea sumber tetap sinkron dengan isi editor.
+                editor.model.document.on('change:data', () => editor.updateSourceElement());
+            })
             .catch(err => console.error('CKEditor gagal:', err));
     }
 
