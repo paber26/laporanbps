@@ -187,7 +187,7 @@
         @endif
 
         <div id="dok-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP, maks 5MB per foto.</p>
+        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP, maks 5MB per foto. Foto yang dipilih otomatis tersimpan di browser dan tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
     </div>
 
     {{-- ===================== TEMPLATE (untuk JS repeater) ===================== --}}
@@ -225,15 +225,23 @@
                 <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
             </div>
             <input type="file" name="dokumentasi[__I__][file]" accept="image/*" class="block w-full text-sm mb-2">
+            <img class="dok-preview hidden mb-2 h-32 w-full object-cover rounded border" alt="preview foto">
+            <p class="dok-saved-note hidden text-xs text-emerald-600 mb-2">✓ Gambar tersimpan otomatis — tetap ada setelah refresh.</p>
             <input type="text" name="dokumentasi[__I__][keterangan]" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
         </div>
     </template>
 
-    <div class="flex items-center justify-end gap-3 mt-6">
-        <a href="{{ route('laporan.index') }}" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Batal</a>
-        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
-            {{ $isEdit ? 'Perbarui Laporan' : 'Simpan Laporan' }}
-        </button>
+    <div class="flex items-center justify-between gap-3 mt-6">
+        <div class="flex items-center gap-3 text-sm">
+            <span id="draft-status" class="text-gray-400"></span>
+            <button type="button" id="btn-clear-draft" class="text-rose-600 hover:underline hidden">Hapus draf</button>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{{ route('laporan.index') }}" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Batal</a>
+            <button type="submit" class="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+                {{ $isEdit ? 'Perbarui Laporan' : 'Simpan Laporan' }}
+            </button>
+        </div>
     </div>
 </form>
 
@@ -244,7 +252,83 @@
     let uraianIndex = {{ count($uraianRows) }};
     let dokIndex = 0;
 
+    // Kunci draft: beda antara form buat-baru dan form edit tiap laporan.
+    const DRAFT_KEY = @json($isEdit ? 'laporan_draft:edit:'.$laporan->id : 'laporan_draft:create');
+
     const hasCK = typeof window.ClassicEditor !== 'undefined';
+    const form = document.getElementById('laporan-form');
+    const uraianContainer = document.getElementById('uraian-container');
+    const dokContainer = document.getElementById('dok-container');
+    const SIMPLE_FIELDS = ['pegawai_id', 'pembiayaan_id', 'judul_laporan', 'perihal_laporan',
+        'tujuan_surat', 'tempat_laporan', 'tanggal_laporan', 'lokasi_tujuan'];
+
+    let restoring = false; // cegah autosave saat sedang memulihkan draft
+
+    // ====== Penyimpanan gambar draft di IndexedDB (biner, kuota besar) ======
+    // Foto yang dipilih langsung disimpan agar tetap muncul setelah refresh
+    // dan otomatis dimasukkan kembali ke input file saat halaman dibuka lagi.
+    const IDB = {
+        _db: null,
+        open() {
+            return new Promise((res, rej) => {
+                if (this._db) return res(this._db);
+                const rq = indexedDB.open('laporan_draft_files', 1);
+                rq.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('files')) db.createObjectStore('files', { keyPath: 'id' });
+                };
+                rq.onsuccess = e => { this._db = e.target.result; res(this._db); };
+                rq.onerror = e => rej(e);
+            });
+        },
+        async put(rec) { const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put(rec); tx.oncomplete = () => res(); tx.onerror = e => rej(e); }); },
+        async get(id) { const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('files', 'readonly'); const rq = tx.objectStore('files').get(id); rq.onsuccess = () => res(rq.result); rq.onerror = e => rej(e); }); },
+        async del(id) { const db = await this.open(); return new Promise(res => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').delete(id); tx.oncomplete = () => res(); }); },
+        async delByDraft(key) { const db = await this.open(); return new Promise(res => { const tx = db.transaction('files', 'readwrite'); const rq = tx.objectStore('files').openCursor(); rq.onsuccess = e => { const c = e.target.result; if (c) { if (c.value.draftKey === key) c.delete(); c.continue(); } }; tx.oncomplete = () => res(); }); },
+    };
+
+    function showPreview(row, url) {
+        const img = row.querySelector('.dok-preview');
+        const note = row.querySelector('.dok-saved-note');
+        if (img) { img.src = url; img.classList.remove('hidden'); }
+        if (note) note.classList.remove('hidden');
+    }
+
+    function attachFileToRow(row, blob, name, type) {
+        const input = row.querySelector('input[type=file]');
+        if (input) {
+            try {
+                const file = new File([blob], name || 'foto.jpg', { type: type || blob.type || 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files; // masukkan kembali file agar tetap ikut ter-submit
+            } catch (e) { /* DataTransfer tak didukung: preview tetap tampil */ }
+        }
+        showPreview(row, URL.createObjectURL(blob));
+    }
+
+    async function loadDokFile(row, fileId, name, type) {
+        try {
+            const rec = await IDB.get(fileId);
+            if (rec && rec.blob) attachFileToRow(row, rec.blob, name || rec.name, type || rec.type);
+        } catch (e) { /* abaikan */ }
+    }
+
+    async function onDokFileChange(input) {
+        const row = input.closest('.dok-row');
+        const file = input.files && input.files[0];
+        if (!row || !file) return;
+        const id = DRAFT_KEY + ':' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        if (row.dataset.fileId) { IDB.del(row.dataset.fileId); }
+        try {
+            await IDB.put({ id, draftKey: DRAFT_KEY, blob: file, name: file.name, type: file.type });
+            row.dataset.fileId = id;
+            row.dataset.fileName = file.name;
+            row.dataset.fileType = file.type;
+            showPreview(row, URL.createObjectURL(file));
+        } catch (e) { console.error('Gagal menyimpan gambar draf:', e); }
+        scheduleSave();
+    }
 
     function initEditor(textarea) {
         if (!hasCK || textarea._editor) return;
@@ -254,45 +338,73 @@
             })
             .then(editor => {
                 textarea._editor = editor;
-                // Selalu jaga textarea sumber tetap sinkron dengan isi editor.
-                editor.model.document.on('change:data', () => editor.updateSourceElement());
+                editor.model.document.on('change:data', () => {
+                    editor.updateSourceElement();
+                    scheduleSave();
+                });
             })
             .catch(err => console.error('CKEditor gagal:', err));
     }
 
-    function initAllEditors() {
-        document.querySelectorAll('#uraian-container .uraian-editor').forEach(initEditor);
-    }
-
     function renumberUraian() {
-        document.querySelectorAll('#uraian-container .uraian-row .uraian-num')
+        uraianContainer.querySelectorAll('.uraian-row .uraian-num')
             .forEach((el, i) => el.textContent = i + 1);
     }
 
-    // Tambah uraian
-    document.getElementById('btn-add-uraian').addEventListener('click', function () {
+    // Tambah satu baris uraian (opsional dengan data awal untuk pemulihan draft).
+    function addUraianRow(data) {
         const tpl = document.getElementById('tpl-uraian').innerHTML.replaceAll('__I__', uraianIndex++);
         const wrap = document.createElement('div');
         wrap.innerHTML = tpl.trim();
         const node = wrap.firstElementChild;
-        document.getElementById('uraian-container').appendChild(node);
+        if (data) {
+            const set = (name, val) => { const el = node.querySelector('[name$="[' + name + ']"]'); if (el) el.value = val || ''; };
+            set('tanggal_kegiatan', data.tanggal_kegiatan);
+            set('jam_mulai', data.jam_mulai);
+            set('jam_selesai', data.jam_selesai);
+            // Isi textarea SEBELUM editor dibuat agar CKEditor memuat kontennya.
+            const ta = node.querySelector('.uraian-editor');
+            if (ta) ta.value = data.uraian_text || '';
+        }
+        uraianContainer.appendChild(node);
         initEditor(node.querySelector('.uraian-editor'));
         renumberUraian();
-    });
+        return node;
+    }
 
-    // Tambah dokumentasi
-    document.getElementById('btn-add-dok').addEventListener('click', function () {
+    function addDokRow(data) {
         const tpl = document.getElementById('tpl-dok').innerHTML.replaceAll('__I__', dokIndex++);
         const wrap = document.createElement('div');
         wrap.innerHTML = tpl.trim();
-        document.getElementById('dok-container').appendChild(wrap.firstElementChild);
+        const node = wrap.firstElementChild;
+        if (data) {
+            const ket = node.querySelector('[name$="[keterangan]"]');
+            if (ket) ket.value = data.keterangan || '';
+        }
+        dokContainer.appendChild(node);
+        // Pulihkan gambar dari IndexedDB bila draft menyimpannya.
+        if (data && data.fileId) {
+            node.dataset.fileId = data.fileId;
+            node.dataset.fileName = data.fileName || '';
+            node.dataset.fileType = data.fileType || '';
+            loadDokFile(node, data.fileId, data.fileName, data.fileType);
+        }
+        return node;
+    }
+
+    document.getElementById('btn-add-uraian').addEventListener('click', () => { addUraianRow(); scheduleSave(); });
+    document.getElementById('btn-add-dok').addEventListener('click', () => { addDokRow(); scheduleSave(); });
+
+    // Simpan gambar begitu dipilih (sebelum submit).
+    dokContainer.addEventListener('change', function (e) {
+        if (e.target.matches('input[type=file]')) onDokFileChange(e.target);
     });
 
     // Hapus baris (delegasi)
     document.addEventListener('click', function (e) {
         if (e.target.classList.contains('btn-remove-uraian')) {
             const row = e.target.closest('.uraian-row');
-            if (document.querySelectorAll('#uraian-container .uraian-row').length <= 1) {
+            if (uraianContainer.querySelectorAll('.uraian-row').length <= 1) {
                 alert('Minimal harus ada satu uraian kegiatan.');
                 return;
             }
@@ -300,17 +412,134 @@
             if (ta && ta._editor) { ta._editor.destroy().catch(() => {}); }
             row.remove();
             renumberUraian();
+            scheduleSave();
         }
         if (e.target.classList.contains('btn-remove-dok')) {
-            e.target.closest('.dok-row').remove();
+            const drow = e.target.closest('.dok-row');
+            if (drow.dataset.fileId) { IDB.del(drow.dataset.fileId); }
+            drow.remove();
+            scheduleSave();
         }
     });
 
-    // Sinkronkan editor -> textarea sebelum submit
-    document.getElementById('laporan-form').addEventListener('submit', function () {
+    // ============ AUTOSAVE / RESTORE DRAFT (localStorage) ============
+    const statusEl = document.getElementById('draft-status');
+    const clearBtn = document.getElementById('btn-clear-draft');
+    let saveTimer = null;
+
+    function collect() {
+        const data = { fields: {}, uraians: [], dokumentasi: [] };
+        SIMPLE_FIELDS.forEach(name => {
+            const el = form.querySelector('[name="' + name + '"]');
+            if (el) data.fields[name] = el.value;
+        });
+        uraianContainer.querySelectorAll('.uraian-row').forEach(row => {
+            const g = (n) => { const el = row.querySelector('[name$="[' + n + ']"]'); return el ? el.value : ''; };
+            const ta = row.querySelector('.uraian-editor');
+            data.uraians.push({
+                tanggal_kegiatan: g('tanggal_kegiatan'),
+                jam_mulai: g('jam_mulai'),
+                jam_selesai: g('jam_selesai'),
+                uraian_text: (ta && ta._editor) ? ta._editor.getData() : (ta ? ta.value : ''),
+            });
+        });
+        dokContainer.querySelectorAll('.dok-row').forEach(row => {
+            const ket = row.querySelector('[name$="[keterangan]"]');
+            data.dokumentasi.push({
+                keterangan: ket ? ket.value : '',
+                fileId: row.dataset.fileId || '',
+                fileName: row.dataset.fileName || '',
+                fileType: row.dataset.fileType || '',
+            });
+        });
+        return data;
+    }
+
+    function isEmptyDraft(d) {
+        const anyField = SIMPLE_FIELDS.some(n => (d.fields[n] || '').trim() !== '');
+        const anyUraian = d.uraians.some(u => (u.uraian_text || '').trim() !== '' || (u.tanggal_kegiatan || '') !== '' || (u.jam_mulai || '') !== '' || (u.jam_selesai || '') !== '');
+        const anyDok = d.dokumentasi.some(k => (k.keterangan || '').trim() !== '' || (k.fileId || '') !== '');
+        return !(anyField || anyUraian || anyDok);
+    }
+
+    function save() {
+        if (restoring) return;
+        const data = collect();
+        if (isEmptyDraft(data)) { return; }
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+            const t = new Date().toLocaleTimeString('id-ID');
+            statusEl.textContent = 'Draf tersimpan otomatis · ' + t;
+            statusEl.className = 'text-emerald-600';
+            clearBtn.classList.remove('hidden');
+        } catch (err) {
+            statusEl.textContent = 'Gagal menyimpan draf (penyimpanan penuh)';
+            statusEl.className = 'text-rose-500';
+        }
+    }
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(save, 400);
+    }
+
+    function clearDraft() {
+        localStorage.removeItem(DRAFT_KEY);
+        try { IDB.delByDraft(DRAFT_KEY); } catch (e) { /* abaikan */ }
+        statusEl.textContent = '';
+        clearBtn.classList.add('hidden');
+    }
+
+    function restore() {
+        let raw;
+        try { raw = localStorage.getItem(DRAFT_KEY); } catch (e) { raw = null; }
+        if (!raw) return false;
+        let d;
+        try { d = JSON.parse(raw); } catch (e) { return false; }
+        if (!d || isEmptyDraft(d)) return false;
+
+        restoring = true;
+
+        SIMPLE_FIELDS.forEach(name => {
+            if (d.fields[name] !== undefined) {
+                const el = form.querySelector('[name="' + name + '"]');
+                if (el) el.value = d.fields[name];
+            }
+        });
+
+        // Bangun ulang baris uraian dari draft (buang baris bawaan server).
+        uraianContainer.querySelectorAll('.uraian-row .uraian-editor').forEach(ta => {
+            if (ta._editor) ta._editor.destroy().catch(() => {});
+        });
+        uraianContainer.innerHTML = '';
+        (d.uraians && d.uraians.length ? d.uraians : [null]).forEach(u => addUraianRow(u));
+
+        // Bangun ulang baris dokumentasi + pulihkan gambar dari IndexedDB.
+        dokContainer.innerHTML = '';
+        (d.dokumentasi || []).forEach(k => addDokRow(k));
+
+        restoring = false;
+        statusEl.textContent = 'Draf sebelumnya dipulihkan';
+        statusEl.className = 'text-emerald-600';
+        clearBtn.classList.remove('hidden');
+        return true;
+    }
+
+    clearBtn.addEventListener('click', function () {
+        if (!confirm('Hapus draf tersimpan dan kosongkan indikator?')) return;
+        clearDraft();
+    });
+
+    // Simpan saat mengetik / mengubah field mana pun.
+    form.addEventListener('input', scheduleSave);
+    form.addEventListener('change', scheduleSave);
+
+    // Sinkronkan editor -> textarea & bersihkan draft saat submit berhasil dikirim.
+    form.addEventListener('submit', function () {
         document.querySelectorAll('.uraian-editor').forEach(ta => {
             if (ta._editor) ta._editor.updateSourceElement();
         });
+        clearDraft();
     });
 
     // Auto-fill info petugas & pembiayaan
@@ -341,8 +570,12 @@
     }
     pemSel.addEventListener('change', showPem);
 
-    // Inisialisasi
-    initAllEditors();
+    // ============ INISIALISASI ============
+    const restored = restore();
+    if (!restored) {
+        // Tidak ada draft: inisialisasi editor pada baris bawaan server.
+        uraianContainer.querySelectorAll('.uraian-editor').forEach(initEditor);
+    }
     showPeg();
     showPem();
 })();
