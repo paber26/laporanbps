@@ -196,7 +196,7 @@
                         <span class="text-sm font-medium text-gray-600">Foto</span>
                         <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
                     </div>
-                    <input type="file" name="dokumentasi[{{ $i }}][file]" accept="image/*" class="dok-file block w-full text-sm mb-2">
+                    <input type="file" name="dokumentasi[{{ $i }}][file]" accept="image/*,.heic,.heif" class="dok-file block w-full text-sm mb-2">
                     <input type="hidden" class="dok-path" name="dokumentasi[{{ $i }}][path]" value="{{ $dp }}">
                     <img class="dok-preview {{ $dp ? '' : 'hidden' }} mb-2 h-32 w-full object-cover rounded border" src="{{ $durl }}" alt="preview foto">
                     <p class="dok-saved-note {{ $dp ? '' : 'hidden' }} text-xs text-emerald-600 mb-2">✓ Gambar terunggah ke server — tetap ada setelah refresh.</p>
@@ -205,7 +205,7 @@
                 </div>
             @endforeach
         </div>
-        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP, maks 5MB per foto. Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
+        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP/HEIC, maks 5MB per foto (HEIC dari iPhone otomatis dikonversi ke JPG). Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
     </div>
 
     {{-- ===================== TEMPLATE (untuk JS repeater) ===================== --}}
@@ -242,7 +242,7 @@
                 <span class="text-sm font-medium text-gray-600">Foto</span>
                 <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
             </div>
-            <input type="file" name="dokumentasi[__I__][file]" accept="image/*" class="dok-file block w-full text-sm mb-2">
+            <input type="file" name="dokumentasi[__I__][file]" accept="image/*,.heic,.heif" class="dok-file block w-full text-sm mb-2">
             <input type="hidden" class="dok-path" name="dokumentasi[__I__][path]">
             <img class="dok-preview hidden mb-2 h-32 w-full object-cover rounded border" alt="preview foto">
             <p class="dok-saved-note hidden text-xs text-emerald-600 mb-2">✓ Gambar terunggah ke server — tetap ada setelah refresh.</p>
@@ -337,15 +337,15 @@
                 headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
                 body: fd,
             });
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));
             row.dataset.name = data.name || file.name;
             setRowFile(row, data.path, data.url);
             // Kosongkan input file agar tidak terunggah dua kali saat submit (pakai path).
             input.value = '';
         } catch (e) {
             console.error('Gagal mengunggah foto:', e);
-            alert('Gagal mengunggah foto. Coba lagi.');
+            alert(e.message || 'Gagal mengunggah foto. Coba lagi.');
         } finally {
             toggleUploading(row, false);
         }

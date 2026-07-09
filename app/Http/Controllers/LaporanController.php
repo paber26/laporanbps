@@ -167,11 +167,17 @@ class LaporanController extends Controller
     public function uploadDraft(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'file' => ['required', 'file', 'max:5120'],
         ]);
 
         $dir = 'dokumentasi/tmp/'.$request->user()->id;
-        $path = $request->file('file')->store($dir, 'public');
+        $path = $this->storeImage($request->file('file'), $dir);
+
+        if (! $path) {
+            return response()->json([
+                'message' => 'Format foto tidak didukung atau gagal dikonversi. Gunakan JPG/PNG/WEBP/HEIC.',
+            ], 422);
+        }
 
         return response()->json([
             'path' => $path,
@@ -193,6 +199,81 @@ class LaporanController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Simpan berkas gambar ke disk public. Foto HEIC/HEIF dikonversi ke JPEG
+     * agar bisa ditampilkan di web dan dirender di PDF/Word.
+     *
+     * @return string|null Path relatif hasil simpan, atau null bila format tak didukung/gagal.
+     */
+    protected function storeImage(\Illuminate\Http\UploadedFile $file, string $dir): ?string
+    {
+        $ext = strtolower($file->getClientOriginalExtension());
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+        if (! in_array($ext, $allowed, true)) {
+            return null;
+        }
+
+        $path = $file->store($dir, 'public');
+
+        if (in_array($ext, ['heic', 'heif'], true)) {
+            $converted = $this->convertToJpeg($path);
+            if (! $converted) {
+                Storage::disk('public')->delete($path);
+
+                return null;
+            }
+            $path = $converted;
+        }
+
+        return $path;
+    }
+
+    /**
+     * Konversi berkas gambar (mis. HEIC) menjadi JPEG. Memakai Imagick bila
+     * tersedia, jika tidak memakai `sips` (bawaan macOS).
+     */
+    protected function convertToJpeg(string $path): ?string
+    {
+        $disk = Storage::disk('public');
+        $abs = $disk->path($path);
+        $newPath = preg_replace('/\.(heic|heif)$/i', '.jpg', $path);
+        if ($newPath === $path) {
+            $newPath = $path.'.jpg';
+        }
+        $newAbs = $disk->path($newPath);
+
+        $ok = false;
+
+        if (extension_loaded('imagick')) {
+            try {
+                $im = new \Imagick();
+                $im->readImage($abs);
+                $im->setImageFormat('jpeg');
+                $im->setImageCompressionQuality(88);
+                $im->writeImage($newAbs);
+                $im->clear();
+                $ok = is_file($newAbs);
+            } catch (\Throwable $e) {
+                $ok = false;
+            }
+        }
+
+        if (! $ok && function_exists('exec') && is_file('/usr/bin/sips')) {
+            @exec('/usr/bin/sips -s format jpeg '.escapeshellarg($abs).' --out '.escapeshellarg($newAbs).' 2>&1', $out, $code);
+            $ok = ($code === 0 && is_file($newAbs));
+        }
+
+        if ($ok) {
+            if ($newPath !== $path) {
+                $disk->delete($path);
+            }
+
+            return $newPath;
+        }
+
+        return null;
     }
 
     /**
@@ -219,7 +300,7 @@ class LaporanController extends Controller
             'uraians.*.uraian_text' => ['required', 'string'],
 
             'dokumentasi' => ['nullable', 'array'],
-            'dokumentasi.*.file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'dokumentasi.*.file' => ['nullable', 'file', 'max:5120'],
             'dokumentasi.*.path' => ['nullable', 'string', 'max:255'],
             'dokumentasi.*.keterangan' => ['nullable', 'string', 'max:255'],
         ]);
@@ -258,7 +339,7 @@ class LaporanController extends Controller
             // 1) Unggahan langsung (fallback tanpa JS / AJAX gagal).
             $file = $request->file("dokumentasi.$i.file");
             if ($file) {
-                $path = $file->store('dokumentasi/'.$laporan->id, 'public');
+                $path = $this->storeImage($file, 'dokumentasi/'.$laporan->id);
             }
             // 2) Foto draft yang sudah terunggah lebih dulu: pindahkan dari tmp.
             elseif (! empty($dok['path'])) {
