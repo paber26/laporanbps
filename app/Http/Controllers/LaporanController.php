@@ -48,6 +48,7 @@ class LaporanController extends Controller
         $data = $this->validateLaporan($request);
 
         $laporan = DB::transaction(function () use ($request, $data) {
+            $data = $this->withPembiayaan($request, $data);
             $laporan = Laporan::create($data);
 
             $this->syncUraians($request, $laporan);
@@ -94,6 +95,7 @@ class LaporanController extends Controller
         $data = $this->validateLaporan($request);
 
         DB::transaction(function () use ($request, $laporan, $data) {
+            $data = $this->withPembiayaan($request, $data);
             $laporan->update($data);
 
             // Uraian: hapus lama, buat ulang dari input (murah karena hanya teks).
@@ -285,7 +287,13 @@ class LaporanController extends Controller
     {
         return $request->validate([
             'pegawai_id' => ['required', 'exists:pegawais,id'],
-            'pembiayaan_id' => ['nullable', 'exists:master_pembiayaans,id'],
+            // Pembiayaan bersifat dinamis: pilih dari master atau ketik baru.
+            // Kombinasi 5 field ini di-firstOrCreate menjadi master_pembiayaan.
+            'program' => ['nullable', 'string', 'max:255'],
+            'kegiatan' => ['nullable', 'required_with:program', 'string', 'max:255'],
+            'ro' => ['nullable', 'required_with:program', 'string', 'max:255'],
+            'komponen' => ['nullable', 'required_with:program', 'string', 'max:255'],
+            'akun' => ['nullable', 'required_with:program', 'string', 'max:255'],
             'judul_laporan' => ['required', 'string', 'max:255'],
             'perihal_laporan' => ['required', 'string', 'max:255'],
             'tujuan_surat' => ['required', 'string', 'max:255'],
@@ -304,6 +312,40 @@ class LaporanController extends Controller
             'dokumentasi.*.path' => ['nullable', 'string', 'max:255'],
             'dokumentasi.*.keterangan' => ['nullable', 'string', 'max:255'],
         ]);
+    }
+
+    /**
+     * Ganti field pembiayaan (program..akun) pada $data dengan pembiayaan_id.
+     * Kombinasi pembiayaan di-firstOrCreate ke master_pembiayaans sehingga
+     * pembiayaan baru otomatis tersimpan dan yang sudah ada dipakai ulang.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function withPembiayaan(Request $request, array $data): array
+    {
+        foreach (['program', 'kegiatan', 'ro', 'komponen', 'akun'] as $f) {
+            unset($data[$f]);
+        }
+
+        $program = trim((string) $request->input('program'));
+        if ($program === '') {
+            $data['pembiayaan_id'] = null;
+
+            return $data;
+        }
+
+        $pembiayaan = MasterPembiayaan::firstOrCreate([
+            'program' => $program,
+            'kegiatan' => trim((string) $request->input('kegiatan')),
+            'ro' => trim((string) $request->input('ro')),
+            'komponen' => trim((string) $request->input('komponen')),
+            'akun' => trim((string) $request->input('akun')),
+        ]);
+
+        $data['pembiayaan_id'] = $pembiayaan->id;
+
+        return $data;
     }
 
     /**

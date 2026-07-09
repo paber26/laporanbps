@@ -18,6 +18,15 @@
     }
 
     $val = fn ($field, $default = '') => old($field, $isEdit ? ($laporan->{$field} instanceof \Carbon\Carbon ? $laporan->{$field}->format('Y-m-d') : $laporan->{$field}) : $default);
+
+    // Kombinasi pembiayaan yang sudah ada untuk saran datalist bertingkat.
+    $pembiayaanCombos = $pembiayaans->map(fn ($p) => [
+        'program' => $p->program,
+        'kegiatan' => $p->kegiatan,
+        'ro' => $p->ro,
+        'komponen' => $p->komponen,
+        'akun' => $p->akun,
+    ])->values();
 @endphp
 
 <form action="{{ $action }}" method="POST" enctype="multipart/form-data" id="laporan-form">
@@ -41,38 +50,42 @@
     <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
         <h3 class="font-semibold text-gray-800 border-b pb-2">Data Umum Laporan</h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <x-input-label for="pegawai_id" value="Petugas (Pilih NIP)" />
-                <select id="pegawai_id" name="pegawai_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                    <option value="">-- Pilih Petugas --</option>
-                    @foreach ($pegawais as $p)
-                        <option value="{{ $p->id }}" data-unit="{{ $p->unit_kerja }}"
-                            @selected($val('pegawai_id') == $p->id)>
-                            {{ $p->nip }} — {{ $p->nama }}
-                        </option>
-                    @endforeach
-                </select>
-                <p id="pegawai-info" class="text-xs text-gray-500 mt-1"></p>
-                <x-input-error :messages="$errors->get('pegawai_id')" class="mt-1" />
-            </div>
+        <div>
+            <x-input-label for="pegawai_id" value="Petugas (Pilih NIP)" />
+            <select id="pegawai_id" name="pegawai_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                <option value="">-- Pilih Petugas --</option>
+                @foreach ($pegawais as $p)
+                    <option value="{{ $p->id }}" data-unit="{{ $p->unit_kerja }}"
+                        @selected($val('pegawai_id') == $p->id)>
+                        {{ $p->nip }} — {{ $p->nama }}
+                    </option>
+                @endforeach
+            </select>
+            <p id="pegawai-info" class="text-xs text-gray-500 mt-1"></p>
+            <x-input-error :messages="$errors->get('pegawai_id')" class="mt-1" />
+        </div>
 
+        {{-- ===== Pembiayaan Kegiatan (bertingkat & bisa tambah baru) ===== --}}
+        @php
+            $pemb = $isEdit ? $laporan->pembiayaan : null;
+            $pv = fn ($f) => old($f, $pemb?->{$f} ?? '');
+        @endphp
+        <div class="border rounded-lg p-4 bg-gray-50 space-y-3">
             <div>
-                <x-input-label for="pembiayaan_id" value="Pembiayaan Kegiatan" />
-                <select id="pembiayaan_id" name="pembiayaan_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                    <option value="">-- Pilih Pembiayaan --</option>
-                    @foreach ($pembiayaans as $p)
-                        <option value="{{ $p->id }}"
-                            data-program="{{ $p->program }}" data-kegiatan="{{ $p->kegiatan }}"
-                            data-ro="{{ $p->ro }}" data-komponen="{{ $p->komponen }}" data-akun="{{ $p->akun }}"
-                            @selected($val('pembiayaan_id') == $p->id)>
-                            {{ Str::limit($p->program, 40) }} — {{ Str::limit($p->kegiatan, 40) }}
-                        </option>
-                    @endforeach
-                </select>
-                <div id="pembiayaan-info" class="text-xs text-gray-600 mt-1 hidden bg-gray-50 border rounded p-2 space-y-0.5"></div>
-                <x-input-error :messages="$errors->get('pembiayaan_id')" class="mt-1" />
+                <p class="text-sm font-medium text-gray-700">Pembiayaan Kegiatan</p>
+                <p class="text-xs text-gray-500">Pilih dari daftar yang ada, atau ketik langsung untuk menambah data baru (Program → Kegiatan → RO → Komponen → Akun). Kosongkan bila tidak diisi.</p>
             </div>
+            @foreach (['program' => 'Program', 'kegiatan' => 'Kegiatan', 'ro' => 'RO (Rincian Output)', 'komponen' => 'Komponen', 'akun' => 'Akun'] as $field => $label)
+                <div>
+                    <x-input-label :for="$field" :value="$label" />
+                    <input id="{{ $field }}" name="{{ $field }}" list="dl-{{ $field }}" autocomplete="off"
+                        value="{{ $pv($field) }}" data-level="{{ $field }}"
+                        class="pembiayaan-field mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"
+                        placeholder="Pilih atau ketik {{ strtolower($label) }} baru">
+                    <datalist id="dl-{{ $field }}"></datalist>
+                    <x-input-error :messages="$errors->get($field)" class="mt-1" />
+                </div>
+            @endforeach
         </div>
 
         <div>
@@ -284,8 +297,12 @@
     const form = document.getElementById('laporan-form');
     const uraianContainer = document.getElementById('uraian-container');
     const dokContainer = document.getElementById('dok-container');
-    const SIMPLE_FIELDS = ['pegawai_id', 'pembiayaan_id', 'judul_laporan', 'perihal_laporan',
-        'tujuan_surat', 'tempat_laporan', 'tanggal_laporan', 'lokasi_tujuan'];
+    const SIMPLE_FIELDS = ['pegawai_id', 'program', 'kegiatan', 'ro', 'komponen', 'akun',
+        'judul_laporan', 'perihal_laporan', 'tujuan_surat', 'tempat_laporan', 'tanggal_laporan', 'lokasi_tujuan'];
+
+    // Semua kombinasi pembiayaan yang sudah ada (untuk saran datalist bertingkat).
+    const PEMBIAYAAN = @json($pembiayaanCombos);
+    const PEMB_FIELDS = ['program', 'kegiatan', 'ro', 'komponen', 'akun'];
 
     let restoring = false; // cegah autosave saat sedang memulihkan draft
 
@@ -571,24 +588,38 @@
     }
     pegSel.addEventListener('change', showPeg);
 
-    const pemSel = document.getElementById('pembiayaan_id');
-    const pemInfo = document.getElementById('pembiayaan-info');
-    function showPem() {
-        const o = pemSel.options[pemSel.selectedIndex];
-        if (o && o.value) {
-            pemInfo.classList.remove('hidden');
-            pemInfo.innerHTML =
-                '<div><b>Program:</b> ' + (o.dataset.program || '') + '</div>' +
-                '<div><b>Kegiatan:</b> ' + (o.dataset.kegiatan || '') + '</div>' +
-                '<div><b>RO:</b> ' + (o.dataset.ro || '') + '</div>' +
-                '<div><b>Komponen:</b> ' + (o.dataset.komponen || '') + '</div>' +
-                '<div><b>Akun:</b> ' + (o.dataset.akun || '') + '</div>';
-        } else {
-            pemInfo.classList.add('hidden');
-            pemInfo.innerHTML = '';
-        }
+    // ====== Pembiayaan bertingkat (datalist cascading + bisa tambah baru) ======
+    function distinctFor(level) {
+        const idx = PEMB_FIELDS.indexOf(level);
+        const parents = PEMB_FIELDS.slice(0, idx);
+        const vals = {};
+        parents.forEach(f => { const el = document.getElementById(f); vals[f] = el ? el.value.trim() : ''; });
+        const set = new Set();
+        PEMBIAYAAN.forEach(row => {
+            for (const f of parents) { if (vals[f] && row[f] !== vals[f]) return; }
+            if (row[level]) set.add(row[level]);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'id'));
     }
-    pemSel.addEventListener('change', showPem);
+    function refreshDatalist(level) {
+        const dl = document.getElementById('dl-' + level);
+        if (!dl) return;
+        dl.innerHTML = '';
+        distinctFor(level).forEach(v => {
+            const o = document.createElement('option');
+            o.value = v;
+            dl.appendChild(o);
+        });
+    }
+    function refreshAllPemb() { PEMB_FIELDS.forEach(refreshDatalist); }
+    PEMB_FIELDS.forEach((f, i) => {
+        const el = document.getElementById(f);
+        if (!el) return;
+        // Saat sebuah level berubah, perbarui saran level-level di bawahnya.
+        el.addEventListener('input', () => PEMB_FIELDS.slice(i + 1).forEach(refreshDatalist));
+        // Saat difokuskan, perbarui saran level tsb sesuai pilihan induk terkini.
+        el.addEventListener('focus', () => refreshDatalist(f));
+    });
 
     // ============ INISIALISASI ============
     // Jika halaman render ulang karena validasi gagal, pakai data server (old())
@@ -598,6 +629,6 @@
         uraianContainer.querySelectorAll('.uraian-editor').forEach(initEditor);
     }
     showPeg();
-    showPem();
+    refreshAllPemb();
 })();
 </script>
