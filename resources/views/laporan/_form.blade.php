@@ -73,16 +73,20 @@
         <div class="border rounded-lg p-4 bg-gray-50 space-y-3">
             <div>
                 <p class="text-sm font-medium text-gray-700">Pembiayaan Kegiatan</p>
-                <p class="text-xs text-gray-500">Pilih dari daftar yang ada, atau ketik langsung untuk menambah data baru (Program → Kegiatan → RO → Komponen → Akun). Kosongkan bila tidak diisi.</p>
+                <p class="text-xs text-gray-500">Pilih dari daftar (Program → Kegiatan → RO → Komponen → Akun). Bila belum ada, pilih <b>“➕ Tambah … baru”</b> lalu ketik nilainya. Kosongkan bila tidak diisi.</p>
             </div>
             @foreach (['program' => 'Program', 'kegiatan' => 'Kegiatan', 'ro' => 'RO (Rincian Output)', 'komponen' => 'Komponen', 'akun' => 'Akun'] as $field => $label)
                 <div>
-                    <x-input-label :for="$field" :value="$label" />
-                    <input id="{{ $field }}" name="{{ $field }}" list="dl-{{ $field }}" autocomplete="off"
-                        value="{{ $pv($field) }}" data-level="{{ $field }}"
-                        class="pembiayaan-field mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"
-                        placeholder="Pilih atau ketik {{ strtolower($label) }} baru">
-                    <datalist id="dl-{{ $field }}"></datalist>
+                    <x-input-label :value="$label" />
+                    <div class="pemb-group mt-1" data-level="{{ $field }}">
+                        <select class="pemb-select block w-full border-gray-300 rounded-md shadow-sm text-sm" data-label="{{ $label }}">
+                            <option value="">-- Pilih {{ $label }} --</option>
+                            <option value="__new__">➕ Tambah {{ strtolower($label) }} baru…</option>
+                        </select>
+                        <input type="text" class="pemb-new hidden mt-2 block w-full border-gray-300 rounded-md shadow-sm text-sm"
+                            placeholder="Ketik {{ strtolower($label) }} baru">
+                        <input type="hidden" name="{{ $field }}" class="pemb-value" value="{{ $pv($field) }}">
+                    </div>
                     <x-input-error :messages="$errors->get($field)" class="mt-1" />
                 </div>
             @endforeach
@@ -588,38 +592,93 @@
     }
     pegSel.addEventListener('change', showPeg);
 
-    // ====== Pembiayaan bertingkat (datalist cascading + bisa tambah baru) ======
-    function distinctFor(level) {
+    // ====== Pembiayaan bertingkat (dropdown + opsi "Tambah baru") ======
+    function pembGroup(level) { return document.querySelector('.pemb-group[data-level="' + level + '"]'); }
+    function pembSelect(level) { const g = pembGroup(level); return g ? g.querySelector('.pemb-select') : null; }
+    function pembNew(level) { const g = pembGroup(level); return g ? g.querySelector('.pemb-new') : null; }
+    function pembHidden(level) { const g = pembGroup(level); return g ? g.querySelector('.pemb-value') : null; }
+    function pembVal(level) { const h = pembHidden(level); return h ? h.value.trim() : ''; }
+
+    // Nilai distinct suatu level, difilter sesuai pilihan level-level di atasnya.
+    function optionsFor(level) {
         const idx = PEMB_FIELDS.indexOf(level);
         const parents = PEMB_FIELDS.slice(0, idx);
-        const vals = {};
-        parents.forEach(f => { const el = document.getElementById(f); vals[f] = el ? el.value.trim() : ''; });
+        const pv = {};
+        parents.forEach(f => pv[f] = pembVal(f));
         const set = new Set();
         PEMBIAYAAN.forEach(row => {
-            for (const f of parents) { if (vals[f] && row[f] !== vals[f]) return; }
+            for (const f of parents) { if (pv[f] && row[f] !== pv[f]) return; }
             if (row[level]) set.add(row[level]);
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b, 'id'));
     }
-    function refreshDatalist(level) {
-        const dl = document.getElementById('dl-' + level);
-        if (!dl) return;
-        dl.innerHTML = '';
-        distinctFor(level).forEach(v => {
+
+    // Selaraskan tampilan (select / kolom ketik) dengan nilai tersembunyi.
+    function applyValue(level, value) {
+        const sel = pembSelect(level), ni = pembNew(level), hid = pembHidden(level);
+        value = (value || '').trim();
+        if (hid) hid.value = value;
+        const inOpts = value && Array.from(sel.options).some(o => o.value === value);
+        if (value && !inOpts) {
+            sel.value = '__new__';
+            ni.classList.remove('hidden');
+            if (ni.value !== value) ni.value = value;
+        } else {
+            sel.value = value;
+            ni.classList.add('hidden');
+        }
+    }
+
+    function buildSelect(level) {
+        const sel = pembSelect(level);
+        if (!sel) return;
+        const label = sel.dataset.label || level;
+        const current = pembVal(level);
+        sel.innerHTML = '';
+        const blank = document.createElement('option');
+        blank.value = ''; blank.textContent = '-- Pilih ' + label + ' --';
+        sel.appendChild(blank);
+        optionsFor(level).forEach(v => {
             const o = document.createElement('option');
-            o.value = v;
-            dl.appendChild(o);
+            o.value = v; o.textContent = v;
+            sel.appendChild(o);
+        });
+        const on = document.createElement('option');
+        on.value = '__new__'; on.textContent = '➕ Tambah ' + label.toLowerCase() + ' baru…';
+        sel.appendChild(on);
+        applyValue(level, current);
+    }
+
+    // Kosongkan & bangun ulang semua level di bawah `level` (cascading).
+    function clearDescendants(level) {
+        const idx = PEMB_FIELDS.indexOf(level);
+        PEMB_FIELDS.slice(idx + 1).forEach(f => {
+            const h = pembHidden(f); if (h) h.value = '';
+            const ni = pembNew(f); if (ni) { ni.value = ''; ni.classList.add('hidden'); }
+            buildSelect(f);
         });
     }
-    function refreshAllPemb() { PEMB_FIELDS.forEach(refreshDatalist); }
-    PEMB_FIELDS.forEach((f, i) => {
-        const el = document.getElementById(f);
-        if (!el) return;
-        // Saat sebuah level berubah, perbarui saran level-level di bawahnya.
-        el.addEventListener('input', () => PEMB_FIELDS.slice(i + 1).forEach(refreshDatalist));
-        // Saat difokuskan, perbarui saran level tsb sesuai pilihan induk terkini.
-        el.addEventListener('focus', () => refreshDatalist(f));
+
+    PEMB_FIELDS.forEach(level => {
+        const sel = pembSelect(level), ni = pembNew(level), hid = pembHidden(level);
+        if (!sel) return;
+        sel.addEventListener('change', () => {
+            if (sel.value === '__new__') {
+                ni.classList.remove('hidden'); ni.value = ''; if (hid) hid.value = ''; ni.focus();
+            } else {
+                ni.classList.add('hidden'); if (hid) hid.value = sel.value;
+            }
+            clearDescendants(level);
+            scheduleSave();
+        });
+        ni.addEventListener('input', () => {
+            if (hid) hid.value = ni.value.trim();
+            clearDescendants(level);
+            scheduleSave();
+        });
     });
+
+    function syncPembiayaan() { PEMB_FIELDS.forEach(buildSelect); }
 
     // ============ INISIALISASI ============
     // Jika halaman render ulang karena validasi gagal, pakai data server (old())
@@ -629,6 +688,6 @@
         uraianContainer.querySelectorAll('.uraian-editor').forEach(initEditor);
     }
     showPeg();
-    refreshAllPemb();
+    syncPembiayaan();
 })();
 </script>
