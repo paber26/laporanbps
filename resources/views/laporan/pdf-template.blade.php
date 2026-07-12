@@ -27,6 +27,12 @@
         table.uraian th, table.uraian td { border: 1px solid #000; padding: 5pt 6pt; vertical-align: top; text-align: left; font-size: 11pt; }
         table.uraian th { text-align: center; font-weight: bold; }
         table.uraian td p { margin: 0 0 6pt; }
+        table.uraian td p:last-child { margin-bottom: 0; }
+        /* Uraian panjang dipecah per paragraf menjadi beberapa baris agar teks
+           mengalir mengisi halaman. Batas atas/bawah antar-baris dalam satu hari
+           dihilangkan sehingga tetap tampil sebagai satu blok utuh. */
+        table.uraian tr.cont td { border-top: none; }
+        table.uraian tr.open td { border-bottom: none; }
         .col-tgl { width: 22%; }
         .col-jam { width: 15%; }
         .foto-grid { width: 100%; border-collapse: collapse; }
@@ -84,8 +90,8 @@
                 @php
                     $ttd = null;
                     $ttdPath = $laporan->pegawai->tanda_tangan_path;
-                    if ($ttdPath && is_file($sig = \Storage::disk('public')->path($ttdPath))) {
-                        $ttd = 'data:image/'.pathinfo($sig, PATHINFO_EXTENSION).';base64,'.base64_encode(file_get_contents($sig));
+                    if ($ttdPath) {
+                        $ttd = \App\Support\PdfImage::dataUri(\Storage::disk('public')->path($ttdPath), 600);
                     }
                 @endphp
                 @if ($ttd)
@@ -120,11 +126,20 @@
         </thead>
         <tbody>
             @forelse ($laporan->uraians as $u)
-                <tr>
-                    <td>{{ $u->tanggal_kegiatan?->translatedFormat('l') }}/{{ $u->tanggal_kegiatan?->translatedFormat('j F Y') }}</td>
-                    <td>{{ trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? '')) }}</td>
-                    <td>{!! $u->uraian_html !!}</td>
-                </tr>
+                @php
+                    $paras = $u->uraian_paragraphs;
+                    if (empty($paras)) { $paras = ['']; }
+                    $last = count($paras) - 1;
+                    $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
+                    $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
+                @endphp
+                @foreach ($paras as $pi => $para)
+                    <tr class="{{ $pi > 0 ? 'cont' : '' }} {{ $pi < $last ? 'open' : '' }}">
+                        <td class="col-tgl">{{ $pi === 0 ? $tgl : '' }}</td>
+                        <td class="col-jam">{{ $pi === 0 ? $jam : '' }}</td>
+                        <td>{!! $para !!}</td>
+                    </tr>
+                @endforeach
             @empty
                 <tr><td colspan="3" class="center">Belum ada uraian kegiatan.</td></tr>
             @endforelse
@@ -145,11 +160,7 @@
                 <tr>
                     @foreach ($chunk as $dok)
                         @php
-                            $img = null;
-                            $abs = $dok->absolute_path;
-                            if ($abs && is_file($abs)) {
-                                $img = 'data:image/'.pathinfo($abs, PATHINFO_EXTENSION).';base64,'.base64_encode(file_get_contents($abs));
-                            }
+                            $img = \App\Support\PdfImage::dataUri($dok->absolute_path);
                         @endphp
                         <td>
                             @if ($img)<img src="{{ $img }}" alt="dokumentasi">@endif
