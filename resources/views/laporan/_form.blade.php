@@ -576,8 +576,12 @@
     }
 
     clearBtn.addEventListener('click', function () {
-        if (!confirm('Hapus draf tersimpan dan kosongkan indikator?')) return;
+        if (!confirm('Hapus draf tersimpan dan muat ulang halaman dengan data dari server?')) return;
         clearDraft();
+        // Muat ulang agar form kembali ke data server (draf lokal tidak lagi memengaruhi
+        // tampilan) — tanpa reload, form tetap menampilkan isian saat ini meski draf
+        // sudah terhapus dari localStorage, sehingga terlihat seperti "tidak berubah".
+        window.location.reload();
     });
 
     // Simpan saat mengetik / mengubah field mana pun.
