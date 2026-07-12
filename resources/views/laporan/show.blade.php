@@ -26,7 +26,7 @@
                         <option value="legal">Legal</option>
                     </select>
                 </label>
-                <a id="btn-pdf" href="{{ route('laporan.pdf', $laporan) }}?ukuran=a4"
+                <a id="btn-pdf" href="{{ route('laporan.pdf', $laporan) }}?ukuran=a4" target="_blank"
                    class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
                 <a href="{{ route('laporan.word', $laporan) }}"
                    class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>

@@ -145,7 +145,7 @@ class LaporanController extends Controller
 
         $namaFile = 'Laporan-'.$laporan->id.'-'.str($laporan->pegawai->nama)->slug().'.pdf';
 
-        return $pdf->download($namaFile);
+        return $pdf->stream($namaFile);
     }
 
     /**
