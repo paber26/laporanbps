@@ -6,6 +6,7 @@ use App\Models\Laporan;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpWord\Element\Section;
+use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Shared\Converter;
 use PhpOffice\PhpWord\Shared\Html;
@@ -18,7 +19,7 @@ class LaporanWordExporter
 {
     public function generate(Laporan $laporan): string
     {
-        $phpWord = new PhpWord();
+        $phpWord = new PhpWord;
         $phpWord->setDefaultFontName('Times New Roman');
         $phpWord->setDefaultFontSize(12);
 
@@ -32,7 +33,7 @@ class LaporanWordExporter
         }
         $path = $dir.'/laporan-'.$laporan->id.'-'.uniqid().'.docx';
 
-        $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
+        $writer = IOFactory::createWriter($phpWord, 'Word2007');
         $writer->save($path);
 
         return $path;
@@ -171,6 +172,41 @@ class LaporanWordExporter
                 $cell->addText(strip_tags($uraian->uraian_text), [], ['alignment' => 'both', 'spaceAfter' => 0]);
             }
         }
+
+        $this->addTandaTanganMengetahui($section, $laporan);
+    }
+
+    /**
+     * Blok tanda tangan "Mengetahui" (atasan) berdampingan dengan tanda
+     * tangan pelaku perjalanan dinas, ditempatkan setelah tabel Lampiran 1.
+     */
+    protected function addTandaTanganMengetahui(Section $section, Laporan $laporan): void
+    {
+        $tanggal = Carbon::parse($laporan->tanggal_laporan)->locale('id')->translatedFormat('j F Y');
+        $namaStyle = ['bold' => true, 'underline' => 'single'];
+        $paragraph = ['alignment' => 'center', 'spaceAfter' => 0];
+
+        $section->addTextBreak(1);
+        $ttd = $section->addTable(['width' => 100 * 50, 'unit' => 'pct']);
+        $ttd->addRow();
+
+        $left = $ttd->addCell(4750, ['valign' => 'top']);
+        $left->addText('Mengetahui,', [], $paragraph);
+        $left->addText(config('laporan.mengetahui.jabatan'), [], $paragraph);
+        $left->addTextBreak(3);
+        $left->addText(config('laporan.mengetahui.nama'), $namaStyle, $paragraph);
+
+        $right = $ttd->addCell(4750, ['valign' => 'top']);
+        $right->addText($laporan->tempat_laporan.', '.$tanggal, [], $paragraph);
+        $right->addText('Pelaku Perjalanan Dinas', [], $paragraph);
+        if ($laporan->pegawai->tanda_tangan_path && Storage::disk('public')->exists($laporan->pegawai->tanda_tangan_path)) {
+            $right->addImage(Storage::disk('public')->path($laporan->pegawai->tanda_tangan_path), [
+                'width' => 120, 'alignment' => 'center',
+            ]);
+        } else {
+            $right->addTextBreak(3);
+        }
+        $right->addText($laporan->pegawai->nama, $namaStyle, $paragraph);
     }
 
     protected function buildLampiran2(PhpWord $phpWord, Laporan $laporan): void

@@ -21,16 +21,24 @@
         .ttd { width: 100%; margin-top: 18pt; }
         .ttd td { vertical-align: top; }
         .ttd .space { height: 60pt; }
+        .ttd-mengetahui { width: 100%; margin-top: 24pt; }
+        .ttd-mengetahui td { width: 50%; vertical-align: top; text-align: center; }
+        .ttd-mengetahui .space { height: 60pt; }
+        .ttd-mengetahui .nama { text-decoration: underline; font-weight: bold; }
         .page-break { page-break-before: always; }
         .lampiran-title { text-align: center; font-weight: bold; text-transform: uppercase; margin: 0 0 14pt; }
         table.uraian { width: 100%; border-collapse: collapse; }
         table.uraian th, table.uraian td { border: 1px solid #000; padding: 5pt 6pt; vertical-align: top; text-align: left; font-size: 11pt; }
         table.uraian th { text-align: center; font-weight: bold; }
-        table.uraian td p { margin: 0 0 6pt; }
-        table.uraian td p:last-child { margin-bottom: 0; }
-        /* Uraian panjang dipecah per paragraf menjadi beberapa baris agar teks
-           mengalir mengisi halaman. Batas atas/bawah antar-baris dalam satu hari
-           dihilangkan sehingga tetap tampil sebagai satu blok utuh. */
+        /* Uraian panjang dipecah menjadi banyak baris kecil (~12 kata) agar teks
+           bisa mengalir mengisi halaman — dompdf memindahkan satu <tr> secara utuh
+           ke halaman berikutnya bila tak muat, jadi baris besar menyisakan banyak
+           ruang kosong. Batas atas/bawah antar-baris dalam satu hari dihilangkan
+           sehingga tetap tampil sebagai satu blok utuh; jarak antar-baris dibuat
+           rapat & konsisten, dengan sedikit jarak ekstra hanya di awal paragraf
+           baru agar paragraf tetap terlihat terpisah. */
+        table.uraian tr.chunk td { padding-top: 1pt; padding-bottom: 1pt; }
+        table.uraian tr.chunk.para-start td:last-child { padding-top: 7pt; }
         table.uraian tr.cont td { border-top: none; }
         table.uraian tr.open td { border-bottom: none; }
         .col-tgl { width: 22%; }
@@ -127,23 +135,44 @@
         <tbody>
             @forelse ($laporan->uraians as $u)
                 @php
-                    $paras = $u->uraian_paragraphs;
-                    if (empty($paras)) { $paras = ['']; }
-                    $last = count($paras) - 1;
+                    $chunks = $u->uraian_chunks;
+                    if (empty($chunks)) { $chunks = [['text' => '', 'new_paragraph' => false]]; }
+                    $last = count($chunks) - 1;
                     $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
                     $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
                 @endphp
-                @foreach ($paras as $pi => $para)
-                    <tr class="{{ $pi > 0 ? 'cont' : '' }} {{ $pi < $last ? 'open' : '' }}">
-                        <td class="col-tgl">{{ $pi === 0 ? $tgl : '' }}</td>
-                        <td class="col-jam">{{ $pi === 0 ? $jam : '' }}</td>
-                        <td>{!! $para !!}</td>
+                @foreach ($chunks as $ci => $chunk)
+                    <tr class="chunk {{ $chunk['new_paragraph'] ? 'para-start' : '' }} {{ $ci > 0 ? 'cont' : '' }} {{ $ci < $last ? 'open' : '' }}">
+                        <td class="col-tgl">{{ $ci === 0 ? $tgl : '' }}</td>
+                        <td class="col-jam">{{ $ci === 0 ? $jam : '' }}</td>
+                        <td>{{ $chunk['text'] }}</td>
                     </tr>
                 @endforeach
             @empty
                 <tr><td colspan="3" class="center">Belum ada uraian kegiatan.</td></tr>
             @endforelse
         </tbody>
+    </table>
+
+    <table class="ttd-mengetahui">
+        <tr>
+            <td>
+                Mengetahui,<br>
+                {{ config('laporan.mengetahui.jabatan') }}
+                <div class="space"></div>
+                <div class="nama">{{ config('laporan.mengetahui.nama') }}</div>
+            </td>
+            <td>
+                {{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}<br>
+                Pelaku Perjalanan Dinas
+                @if ($ttd)
+                    <div><img src="{{ $ttd }}" style="height:60pt; margin:4pt 0;" alt="ttd"></div>
+                @else
+                    <div class="space"></div>
+                @endif
+                <div class="nama">{{ $laporan->pegawai->nama }}</div>
+            </td>
+        </tr>
     </table>
 
     {{-- ================= HALAMAN 3: LAMPIRAN 2 ================= --}}

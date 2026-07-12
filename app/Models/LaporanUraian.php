@@ -47,43 +47,73 @@ class LaporanUraian extends Model
     }
 
     /**
-     * Uraian dipecah menjadi array paragraf HTML. Dipakai di PDF agar tiap
-     * paragraf menjadi baris tabel tersendiri sehingga teks yang panjang bisa
-     * mengalir mengisi halaman (dompdf tidak memindahkan satu baris raksasa ke
-     * halaman berikutnya dan menyisakan halaman kosong).
+     * Uraian dipecah menjadi potongan sepanjang ~2-4 kalimat (bukan seluruh
+     * paragraf) untuk dicetak sebagai baris tabel tersendiri di PDF. dompdf
+     * memindahkan satu <tr> secara utuh ke halaman berikutnya bila tidak
+     * muat — dengan paragraf penuh sebagai satu baris, ini bisa menyisakan
+     * banyak ruang kosong di akhir halaman. Memecah per beberapa kalimat
+     * (bukan per kata) menjaga agar tiap baris tabel tetap berisi teks yang
+     * mengalir wajar di dalam selnya (word-wrap normal, tanpa jarak baris
+     * buatan), sambil membatasi maksimum ruang yang terbuang saat halaman
+     * terpaksa berpindah di tengah paragraf panjang.
      *
-     * @return array<int, string>
+     * @return array<int, array{text: string, new_paragraph: bool}>
      */
-    public function getUraianParagraphsAttribute(): array
+    public function getUraianChunksAttribute(): array
     {
         $text = trim((string) $this->uraian_text);
         if ($text === '') {
             return [];
         }
 
-        // Mengandung HTML (editor WYSIWYG): pisah per blok <p>/<div>,
-        // jika tidak ada, pisah per baris kosong (<br><br>).
+        // Ambil paragraf mentah (teks biasa maupun HTML dari editor WYSIWYG),
+        // lalu buang semua tag agar hanya teks polos — spasi antar-baris jadi
+        // konsisten terlepas dari sumbernya.
         if ($text !== strip_tags($text)) {
             if (preg_match_all('/<(p|div)\b[^>]*>(.*?)<\/\1>/is', $text, $m)) {
-                $paras = array_map('trim', $m[2]);
+                $paragraphs = $m[2];
             } else {
-                $paras = preg_split('/(?:<br\s*\/?>\s*){2,}/i', $text) ?: [$text];
-                $paras = array_map('trim', $paras);
+                $paragraphs = preg_split('/(?:<br\s*\/?>\s*){2,}/i', $text) ?: [$text];
             }
-
-            $paras = array_filter(
-                $paras,
-                fn ($p) => trim(strip_tags($p)) !== '' || str_contains($p, '<img')
-            );
-
-            return $paras ? array_values($paras) : [$text];
+        } else {
+            $paragraphs = preg_split('/\n\s*\n/', $text) ?: [$text];
         }
 
-        // Teks biasa: pisah per baris kosong (paragraf), pertahankan baris tunggal.
-        $parts = preg_split('/\n\s*\n/', $text) ?: [$text];
-        $parts = array_map(fn ($p) => nl2br(e(trim($p))), $parts);
-        $parts = array_filter($parts, fn ($p) => $p !== '');
+        $maxLen = 320;
+        $chunks = [];
+        foreach ($paragraphs as $para) {
+            $withBreaks = preg_replace('/<br\s*\/?>/i', "\n", $para);
+            $plain = trim(preg_replace('/\s+/', ' ', strip_tags($withBreaks)));
+            if ($plain === '') {
+                continue;
+            }
 
-        return $parts ? array_values($parts) : [nl2br(e($text))];
+            // Pecah per kalimat (akhiri dengan . ! ? diikuti spasi/akhir teks),
+            // lalu gabungkan kalimat berurutan sampai mendekati $maxLen karakter.
+            preg_match_all('/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/', $plain, $sm);
+            $sentences = $sm[0] ?: [$plain];
+
+            $buffer = '';
+            $isFirst = true;
+            foreach ($sentences as $sentence) {
+                $sentence = trim($sentence);
+                if ($sentence === '') {
+                    continue;
+                }
+                $candidate = $buffer === '' ? $sentence : $buffer.' '.$sentence;
+                if ($buffer !== '' && mb_strlen($candidate) > $maxLen) {
+                    $chunks[] = ['text' => e($buffer), 'new_paragraph' => $isFirst];
+                    $isFirst = false;
+                    $buffer = $sentence;
+                } else {
+                    $buffer = $candidate;
+                }
+            }
+            if ($buffer !== '') {
+                $chunks[] = ['text' => e($buffer), 'new_paragraph' => $isFirst];
+            }
+        }
+
+        return $chunks;
     }
 }
