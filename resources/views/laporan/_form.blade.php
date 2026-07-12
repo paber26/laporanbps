@@ -222,6 +222,11 @@
                 </div>
             @endforeach
         </div>
+        <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-md">
+            <p class="text-xs text-blue-800">
+                <span class="font-semibold">Tips:</span> Anda bisa langsung <kbd class="px-1 py-0.5 bg-white border border-blue-200 rounded text-blue-900">Ctrl+V</kbd> / <kbd class="px-1 py-0.5 bg-white border border-blue-200 rounded text-blue-900">Paste</kbd> foto dari clipboard di mana saja pada halaman ini untuk otomatis menambah Lampiran Foto.
+            </p>
+        </div>
         <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP/HEIC, maks 5MB per foto (HEIC dari iPhone otomatis dikonversi ke JPG). Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
     </div>
 
@@ -340,9 +345,7 @@
         } catch (e) { /* abaikan */ }
     }
 
-    async function onDokFileChange(input) {
-        const row = input.closest('.dok-row');
-        const file = input.files && input.files[0];
+    async function uploadFileToRow(row, file) {
         if (!row || !file) return;
 
         // Hapus foto lama baris ini (bila mengganti file).
@@ -363,7 +366,8 @@
             row.dataset.name = data.name || file.name;
             setRowFile(row, data.path, data.url);
             // Kosongkan input file agar tidak terunggah dua kali saat submit (pakai path).
-            input.value = '';
+            const input = row.querySelector('.dok-file');
+            if (input) input.value = '';
         } catch (e) {
             console.error('Gagal mengunggah foto:', e);
             alert(e.message || 'Gagal mengunggah foto. Coba lagi.');
@@ -371,6 +375,12 @@
             toggleUploading(row, false);
         }
         scheduleSave();
+    }
+
+    async function onDokFileChange(input) {
+        const row = input.closest('.dok-row');
+        const file = input.files && input.files[0];
+        uploadFileToRow(row, file);
     }
 
     function initEditor(textarea) {
@@ -689,5 +699,44 @@
     }
     showPeg();
     syncPembiayaan();
+
+    // ============ GLOBAL PASTE LISTENER ============
+    document.addEventListener('paste', function (e) {
+        const items = (e.clipboardData || window.clipboardData).items;
+        let imagePasted = false;
+        
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                if (!blob) continue;
+                
+                // Mencegah default action jika dirasa perlu, tetapi umumnya aman dibiarkan 
+                // agar teks tetap terpaste bila ada. Jika ingin mencegah gambar masuk ke textarea:
+                // e.preventDefault();
+                
+                const ext = blob.type.split('/')[1] || 'png';
+                const validExt = ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'].includes(ext) ? ext : 'png';
+                const file = new File([blob], 'pasted_image_' + Date.now() + '.' + validExt, { type: blob.type });
+                
+                const row = addDokRow();
+                uploadFileToRow(row, file);
+                
+                imagePasted = true;
+            }
+        }
+        
+        if (imagePasted) {
+            scheduleSave();
+            // Scroll ke bagian dokumentasi agar user tahu foto berhasil di-paste
+            const dokContainer = document.getElementById('dok-container');
+            if (dokContainer) {
+                // Beri sedikit jeda agar baris baru selesai di-render
+                setTimeout(() => {
+                    dokContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        }
+    });
+
 })();
 </script>
