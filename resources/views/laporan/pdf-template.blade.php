@@ -23,6 +23,10 @@
         .ttd .space { height: 60pt; }
         .ttd-mengetahui { width: 100%; margin-top: 24pt; }
         .ttd-mengetahui td { width: 50%; vertical-align: top; text-align: center; }
+        /* Tinggi label kiri/kanan disamakan (jabatan bisa membungkus 1-3 baris
+           tergantung panjang teks) agar baris nama tetap sejajar, tidak
+           tergantung berapa baris label di atasnya. */
+        .ttd-mengetahui .label { min-height: 52pt; }
         .ttd-mengetahui .space { height: 60pt; }
         .ttd-mengetahui .nama { text-decoration: underline; font-weight: bold; }
         .page-break { page-break-before: always; }
@@ -157,14 +161,18 @@
     <table class="ttd-mengetahui">
         <tr>
             <td>
-                Mengetahui,<br>
-                {{ config('laporan.mengetahui.jabatan') }}
+                <div class="label">
+                    Mengetahui,<br>
+                    {{ config('laporan.mengetahui.jabatan') }}
+                </div>
                 <div class="space"></div>
                 <div class="nama">{{ config('laporan.mengetahui.nama') }}</div>
             </td>
             <td>
-                {{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}<br>
-                Pelaku Perjalanan Dinas
+                <div class="label">
+                    {{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}<br>
+                    Pelaku Perjalanan Dinas
+                </div>
                 @if ($ttd)
                     <div><img src="{{ $ttd }}" style="height:60pt; margin:4pt 0;" alt="ttd"></div>
                 @else
