@@ -170,6 +170,7 @@
             </td>
             <td>
                 <div class="label">
+                    &nbsp;<br>
                     {{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}<br>
                     Pelaku Perjalanan Dinas
                 </div>
