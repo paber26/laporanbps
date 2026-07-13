@@ -9,7 +9,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+        <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
             @if (session('status'))
                 <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-md">{{ session('status') }}</div>
             @endif
@@ -34,7 +34,7 @@
                                     <td class="px-4 py-3 text-gray-500">{{ $laporan->id }}</td>
                                     <td class="px-4 py-3">
                                         <a href="{{ route('laporan.show', $laporan) }}" class="font-medium text-indigo-600 hover:underline">
-                                            {{ Str::limit($laporan->perihal_laporan, 60) }}
+                                            {{ $laporan->perihal_laporan }}
                                         </a>
                                     </td>
                                     <td class="px-4 py-3">{{ $laporan->pegawai->nama }}</td>
