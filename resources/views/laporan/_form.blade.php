@@ -287,8 +287,10 @@
     </div>
 </form>
 
-{{-- CKEditor 5 (WYSIWYG mirip Word). Jika CDN gagal dimuat, textarea biasa tetap berfungsi. --}}
-<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+{{-- CKEditor 5 (WYSIWYG mirip Word), dibundel lewat Vite (bukan CDN) dengan
+     fitur lengkap: heading, font/warna, alignment, tabel, source editing, dll.
+     Jika bundle gagal dimuat, textarea biasa tetap berfungsi. --}}
+@vite(['resources/js/ckeditor-setup.js'])
 <script>
 (function () {
     let uraianIndex = {{ count($uraianRows) }};
@@ -302,7 +304,16 @@
     // Apakah halaman ini render ulang karena validasi gagal (ada input lama)?
     const SERVER_HAS_OLD = {{ $errors->any() ? 'true' : 'false' }};
 
-    const hasCK = typeof window.ClassicEditor !== 'undefined';
+    // CKEditorBundle dimuat sebagai modul ES lewat Vite yang selalu async,
+    // jadi bisa saja belum siap saat skrip inline ini berjalan. Kalau belum
+    // siap, tunggu event lalu inisialisasi ulang textarea yang sudah ada di DOM.
+    let hasCK = !!window.CKEditorBundle;
+    if (!hasCK) {
+        window.addEventListener('ckeditor5:ready', () => {
+            hasCK = true;
+            document.querySelectorAll('.uraian-editor').forEach(initEditor);
+        }, { once: true });
+    }
     const form = document.getElementById('laporan-form');
     const uraianContainer = document.getElementById('uraian-container');
     const dokContainer = document.getElementById('dok-container');
@@ -385,9 +396,29 @@
 
     function initEditor(textarea) {
         if (!hasCK || textarea._editor) return;
-        window.ClassicEditor
+        const { ClassicEditor, plugins } = window.CKEditorBundle;
+        ClassicEditor
             .create(textarea, {
-                toolbar: ['heading', '|', 'bold', 'italic', '|', 'bulletedList', 'numberedList', '|', 'outdent', 'indent', '|', 'undo', 'redo']
+                licenseKey: 'GPL',
+                plugins,
+                toolbar: {
+                    items: [
+                        'undo', 'redo', '|',
+                        'findAndReplace', 'selectAll', '|',
+                        'heading', '|',
+                        'fontFamily', 'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                        'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', 'code', 'removeFormat', '|',
+                        'alignment', '|',
+                        'bulletedList', 'numberedList', 'todoList', '|',
+                        'outdent', 'indent', '|',
+                        'link', 'blockQuote', 'codeBlock', 'insertTable', 'horizontalLine', 'highlight', 'specialCharacters', '|',
+                        'sourceEditing', 'showBlocks', 'fullscreen',
+                    ],
+                    shouldNotGroupWhenFull: false,
+                },
+                table: {
+                    contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties'],
+                },
             })
             .then(editor => {
                 textarea._editor = editor;
