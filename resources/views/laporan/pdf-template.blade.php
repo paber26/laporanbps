@@ -149,7 +149,7 @@
                     <tr class="chunk {{ $chunk['new_paragraph'] ? 'para-start' : '' }} {{ $ci > 0 ? 'cont' : '' }} {{ $ci < $last ? 'open' : '' }}">
                         <td class="col-tgl">{{ $ci === 0 ? $tgl : '' }}</td>
                         <td class="col-jam">{{ $ci === 0 ? $jam : '' }}</td>
-                        <td>{{ $chunk['text'] }}</td>
+                        <td>{!! $chunk['text'] !!}</td>
                     </tr>
                 @endforeach
             @empty

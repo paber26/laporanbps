@@ -70,25 +70,51 @@ class LaporanUraian extends Model
             return [];
         }
 
-        // Ambil blok mentah: tiap <p>/<div> untuk HTML (editor WYSIWYG), atau
-        // tiap baris kosong-pemisah untuk teks biasa.
+        // Ambil blok mentah: tiap <p>/<div>/<figure> untuk HTML (editor WYSIWYG)
         if ($text !== strip_tags($text)) {
-            if (preg_match_all('/<(p|div)\b[^>]*>(.*?)<\/\1>/is', $text, $m)) {
-                $blocks = $m[2];
-            } else {
-                $blocks = preg_split('/(?:<br\s*\/?>\s*){2,}/i', $text) ?: [$text];
+            // Ini adalah HTML dari editor. Kita ubah gambar menjadi base64 dan tidak memecahnya.
+            // Gunakan preg_replace_callback untuk mengganti src="..." menjadi base64 data URI.
+            $html = preg_replace_callback('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', function ($matches) {
+                $url = $matches[1];
+                $appUrl = config('app.url');
+                $storageUrl = \Illuminate\Support\Facades\Storage::url(''); // misal /storage/
+                
+                // Jika URL mengarah ke storage kita
+                if (str_starts_with($url, $appUrl . $storageUrl) || str_starts_with($url, $storageUrl)) {
+                    $path = str_replace([$appUrl . $storageUrl, $storageUrl], '', $url);
+                    $path = ltrim($path, '/');
+                    $absPath = \Illuminate\Support\Facades\Storage::disk('public')->path($path);
+                    
+                    if ($base64 = \App\Support\PdfImage::dataUri($absPath)) {
+                        return str_replace($url, $base64, $matches[0]);
+                    }
+                }
+                return $matches[0];
+            }, $text);
+            
+            // Kita kumpulkan elemen block-level (p, div, figure, table, ul, ol, dll)
+            // agar setiap block menjadi 1 chunk, sehingga dompdf bisa memecah halaman antar-block.
+            if (preg_match_all('/<(p|div|figure|table|ul|ol|h[1-6])\b[^>]*>.*?<\/\1>/is', $html, $m)) {
+                $chunks = [];
+                foreach ($m[0] as $i => $blockHtml) {
+                    $chunks[] = ['text' => trim($blockHtml), 'new_paragraph' => true];
+                }
+                if (!empty($chunks)) {
+                    return $chunks;
+                }
             }
-        } else {
-            $blocks = preg_split('/\n\s*\n/', $text) ?: [$text];
+            
+            // Fallback jika regex block tidak cocok
+            return [['text' => $html, 'new_paragraph' => true]];
         }
 
-        // Tiap blok non-kosong = satu paragraf (sesuai input pengguna). Blok
-        // kosong (mis. <p>&nbsp;</p>) dibuang, bukan ditampilkan sebagai teks.
+        // Teks biasa (tidak mengandung tag HTML)
+        $blocks = preg_split('/\n\s*\n/', $text) ?: [$text];
+
+        // Tiap blok non-kosong = satu paragraf (sesuai input pengguna).
         $paragraphs = [];
         foreach ($blocks as $block) {
-            $withBreaks = preg_replace('/<br\s*\/?>/i', ' ', $block);
-            $plain = html_entity_decode(strip_tags($withBreaks), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            $plain = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $plain));
+            $plain = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $block));
             if ($plain !== '') {
                 $paragraphs[] = $plain;
             }

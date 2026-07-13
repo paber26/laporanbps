@@ -33,7 +33,7 @@
             </div>
 
             {{-- Dokumen (mirip hasil cetak) --}}
-            <div class="bg-white shadow-sm rounded-lg p-10 leading-relaxed text-[15px] text-gray-900" style="font-family: 'Times New Roman', serif;">
+            <div class="bg-white shadow-sm rounded-lg p-10 leading-relaxed text-[15px] text-gray-900 max-w-[21cm] mx-auto" style="font-family: 'Times New Roman', serif;">
                 <h1 class="text-center font-bold uppercase mb-8">{{ $laporan->judul_laporan }}</h1>
 
                 <div class="flex justify-between mb-6">
