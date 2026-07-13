@@ -42,6 +42,14 @@ import {
     Fullscreen,
     WordCount,
     GeneralHtmlSupport,
+    Image,
+    ImageCaption,
+    ImageResize,
+    ImageStyle,
+    ImageToolbar,
+    ImageUpload,
+    Base64UploadAdapter,
+    PictureEditing,
 } from 'ckeditor5';
 import 'ckeditor5/ckeditor5.css';
 
@@ -60,6 +68,7 @@ window.CKEditorBundle = {
         FontSize, FontColor, FontBackgroundColor, Highlight, RemoveFormat, HorizontalLine,
         SpecialCharacters, SpecialCharactersEssentials, SourceEditing, FindAndReplace,
         SelectAll, ShowBlocks, Fullscreen, WordCount, GeneralHtmlSupport,
+        Image, ImageCaption, ImageResize, ImageStyle, ImageToolbar, ImageUpload, Base64UploadAdapter, PictureEditing,
     ],
 };
 window.dispatchEvent(new Event('ckeditor5:ready'));

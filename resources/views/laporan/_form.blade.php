@@ -420,10 +420,19 @@
                         'alignment', '|',
                         'bulletedList', 'numberedList', 'todoList', '|',
                         'outdent', 'indent', '|',
-                        'link', 'blockQuote', 'codeBlock', 'insertTable', 'horizontalLine', 'highlight', 'specialCharacters', '|',
+                        'link', 'insertImage', 'blockQuote', 'codeBlock', 'insertTable', 'horizontalLine', 'highlight', 'specialCharacters', '|',
                         'sourceEditing', 'showBlocks', 'fullscreen',
                     ],
                     shouldNotGroupWhenFull: false,
+                },
+                image: {
+                    toolbar: [
+                        'imageTextAlternative',
+                        'toggleImageCaption',
+                        'imageStyle:inline',
+                        'imageStyle:block',
+                        'imageStyle:side'
+                    ]
                 },
                 table: {
                     contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties'],
