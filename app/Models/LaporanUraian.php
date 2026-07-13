@@ -66,32 +66,54 @@ class LaporanUraian extends Model
             return [];
         }
 
-        // Ambil paragraf mentah (teks biasa maupun HTML dari editor WYSIWYG),
-        // lalu buang semua tag agar hanya teks polos — spasi antar-baris jadi
-        // konsisten terlepas dari sumbernya.
+        // Ambil blok mentah: tiap <p>/<div> untuk HTML dari editor WYSIWYG,
+        // atau tiap baris untuk teks biasa.
         if ($text !== strip_tags($text)) {
             if (preg_match_all('/<(p|div)\b[^>]*>(.*?)<\/\1>/is', $text, $m)) {
-                $paragraphs = $m[2];
+                $blocks = $m[2];
             } else {
-                $paragraphs = preg_split('/(?:<br\s*\/?>\s*){2,}/i', $text) ?: [$text];
+                $blocks = preg_split('/<br\s*\/?>/i', $text) ?: [$text];
             }
         } else {
-            $paragraphs = preg_split('/\n\s*\n/', $text) ?: [$text];
+            $blocks = preg_split('/\n/', $text) ?: [$text];
+        }
+
+        // Kelompokkan blok jadi paragraf: blok kosong (mis. <p>&nbsp;</p> dari
+        // baris kosong di editor, atau baris kosong di teks biasa) adalah
+        // PEMISAH paragraf sungguhan, bukan teks untuk ditampilkan. Blok
+        // berurutan TANPA pemisah kosong di antaranya digabung jadi satu
+        // paragraf — jadi setiap <p>/Enter dari pengguna TIDAK otomatis
+        // dianggap paragraf baru; hanya baris kosong (Enter dua kali) yang
+        // menandai paragraf baru, sesuai yang benar-benar diketik pengguna.
+        $groups = [[]];
+        foreach ($blocks as $block) {
+            $withBreaks = preg_replace('/<br\s*\/?>/i', "\n", $block);
+            $plain = html_entity_decode(strip_tags($withBreaks), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $plain = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $plain));
+
+            if ($plain === '') {
+                if (! empty(end($groups))) {
+                    $groups[] = [];
+                }
+
+                continue;
+            }
+
+            $groups[count($groups) - 1][] = $plain;
         }
 
         $maxLen = 320;
         $chunks = [];
-        foreach ($paragraphs as $para) {
-            $withBreaks = preg_replace('/<br\s*\/?>/i', "\n", $para);
-            $plain = trim(preg_replace('/\s+/', ' ', strip_tags($withBreaks)));
-            if ($plain === '') {
+        foreach ($groups as $group) {
+            if (empty($group)) {
                 continue;
             }
+            $paragraphText = implode(' ', $group);
 
             // Pecah per kalimat (akhiri dengan . ! ? diikuti spasi/akhir teks),
             // lalu gabungkan kalimat berurutan sampai mendekati $maxLen karakter.
-            preg_match_all('/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/', $plain, $sm);
-            $sentences = $sm[0] ?: [$plain];
+            preg_match_all('/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/', $paragraphText, $sm);
+            $sentences = $sm[0] ?: [$paragraphText];
 
             $buffer = '';
             $isFirst = true;
