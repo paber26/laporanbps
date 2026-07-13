@@ -45,6 +45,15 @@
         table.uraian tr.chunk.para-start td:last-child { padding-top: 7pt; }
         table.uraian tr.cont td { border-top: none; }
         table.uraian tr.open td { border-bottom: none; }
+        table.uraian thead tr:last-child th { border-bottom: none; }
+        .uraian-body {
+            border: 1px solid #000; 
+            border-top: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="1" preserveAspectRatio="none"><rect x="22" y="0" width="0.15" height="1" fill="black"/><rect x="37" y="0" width="0.15" height="1" fill="black"/></svg>');
+            background-size: 100% 1px;
+            background-repeat: repeat-y;
+            font-size: 11pt;
+        }
         .col-tgl { width: 22%; }
         .col-jam { width: 15%; }
         .foto-grid { width: 100%; border-collapse: collapse; }
@@ -53,9 +62,9 @@
         .foto-cap { font-size: 10pt; margin-top: 4pt; }
         
         /* Fix gambar dari CKEditor agar tidak melebihi kertas */
-        table.uraian img { max-width: 100% !important; height: auto !important; }
-        table.uraian figure.image { margin: 5pt 0; text-align: center; }
-        table.uraian figure.image figcaption { font-size: 9pt; color: #555; }
+        table.uraian img, .uraian-body img { max-width: 100% !important; height: auto !important; }
+        table.uraian figure.image, .uraian-body figure.image { margin: 5pt 0; text-align: center; }
+        table.uraian figure.image figcaption, .uraian-body figure.image figcaption { font-size: 9pt; color: #555; }
     </style>
 </head>
 <body>
@@ -130,7 +139,7 @@
         {{ $laporan->pegawai->unit_kerja }}
     </div>
 
-    <table class="uraian">
+    <table class="uraian" style="margin-bottom: 0;">
         <thead>
             <tr>
                 <th class="col-tgl">Hari/Tanggal</th>
@@ -141,27 +150,29 @@
                 <th>(1)</th><th>(2)</th><th>(3)</th>
             </tr>
         </thead>
-        <tbody>
-            @forelse ($laporan->uraians as $u)
-                @php
-                    $chunks = $u->uraian_chunks;
-                    if (empty($chunks)) { $chunks = [['text' => '', 'new_paragraph' => false]]; }
-                    $last = count($chunks) - 1;
-                    $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
-                    $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
-                @endphp
-                @foreach ($chunks as $ci => $chunk)
-                    <tr class="chunk {{ $chunk['new_paragraph'] ? 'para-start' : '' }} {{ $ci > 0 ? 'cont' : '' }} {{ $ci < $last ? 'open' : '' }}">
-                        <td class="col-tgl">{{ $ci === 0 ? $tgl : '' }}</td>
-                        <td class="col-jam">{{ $ci === 0 ? $jam : '' }}</td>
-                        <td>{!! $chunk['text'] !!}</td>
-                    </tr>
-                @endforeach
-            @empty
-                <tr><td colspan="3" class="center">Belum ada uraian kegiatan.</td></tr>
-            @endforelse
-        </tbody>
     </table>
+    <div class="uraian-body">
+        @forelse ($laporan->uraians as $u)
+            @php
+                $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
+                $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
+            @endphp
+            <div style="border-top: {{ $loop->first ? 'none' : '1px solid #000' }}; clear: both;">
+                <div style="float: left; width: 22%; padding: 5pt 6pt; box-sizing: border-box;">
+                    {{ $tgl }}
+                </div>
+                <div style="float: left; width: 15%; padding: 5pt 6pt; box-sizing: border-box;">
+                    {{ $jam }}
+                </div>
+                <div style="margin-left: 37%; padding: 5pt 6pt; box-sizing: border-box;">
+                    {!! $u->uraian_html !!}
+                </div>
+                <div style="clear: both;"></div>
+            </div>
+        @empty
+            <div style="padding: 5pt 6pt; text-align: center;">Belum ada uraian kegiatan.</div>
+        @endforelse
+    </div>
 
     <table class="ttd-mengetahui">
         <tr>
