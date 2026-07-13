@@ -222,10 +222,11 @@
                 </div>
             @endforeach
         </div>
-        <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-md">
+        <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center justify-between">
             <p class="text-xs text-blue-800">
-                <span class="font-semibold">Tips:</span> Anda bisa langsung <kbd class="px-1 py-0.5 bg-white border border-blue-200 rounded text-blue-900">Ctrl+V</kbd> / <kbd class="px-1 py-0.5 bg-white border border-blue-200 rounded text-blue-900">Paste</kbd> foto dari clipboard di mana saja pada halaman ini untuk otomatis menambah Lampiran Foto.
+                <span class="font-semibold">Tips:</span> Anda bisa klik tombol di samping untuk mengambil foto dari clipboard secara otomatis.
             </p>
+            <button type="button" id="btn-paste-clipboard" class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 font-medium">Paste Foto dari Clipboard</button>
         </div>
         <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP/HEIC, maks 5MB per foto (HEIC dari iPhone otomatis dikonversi ke JPG). Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
     </div>
@@ -735,41 +736,41 @@
     showPeg();
     syncPembiayaan();
 
-    // ============ GLOBAL PASTE LISTENER ============
-    document.addEventListener('paste', function (e) {
-        const items = (e.clipboardData || window.clipboardData).items;
-        let imagePasted = false;
-        
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                if (!blob) continue;
-                
-                // Mencegah default action jika dirasa perlu, tetapi umumnya aman dibiarkan 
-                // agar teks tetap terpaste bila ada. Jika ingin mencegah gambar masuk ke textarea:
-                // e.preventDefault();
-                
-                const ext = blob.type.split('/')[1] || 'png';
-                const validExt = ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'].includes(ext) ? ext : 'png';
-                const file = new File([blob], 'pasted_image_' + Date.now() + '.' + validExt, { type: blob.type });
-                
-                const row = addDokRow();
-                uploadFileToRow(row, file);
-                
-                imagePasted = true;
+    // ============ BUTTON PASTE LISTENER ============
+    document.getElementById('btn-paste-clipboard')?.addEventListener('click', async function () {
+        try {
+            const items = await navigator.clipboard.read();
+            let imagePasted = false;
+            
+            for (const item of items) {
+                const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                if (imageTypes.length > 0) {
+                    const blob = await item.getType(imageTypes[0]);
+                    const ext = imageTypes[0].split('/')[1] || 'png';
+                    const validExt = ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'].includes(ext) ? ext : 'png';
+                    const file = new File([blob], 'pasted_image_' + Date.now() + '.' + validExt, { type: blob.type });
+                    
+                    const row = addDokRow();
+                    uploadFileToRow(row, file);
+                    
+                    imagePasted = true;
+                }
             }
-        }
-        
-        if (imagePasted) {
-            scheduleSave();
-            // Scroll ke bagian dokumentasi agar user tahu foto berhasil di-paste
-            const dokContainer = document.getElementById('dok-container');
-            if (dokContainer) {
-                // Beri sedikit jeda agar baris baru selesai di-render
-                setTimeout(() => {
-                    dokContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 100);
+            
+            if (imagePasted) {
+                scheduleSave();
+                const dokContainer = document.getElementById('dok-container');
+                if (dokContainer) {
+                    setTimeout(() => {
+                        dokContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                }
+            } else {
+                alert('Tidak ditemukan gambar di clipboard Anda.');
             }
+        } catch (err) {
+            console.error('Gagal membaca clipboard:', err);
+            alert('Gagal membaca clipboard. Pastikan browser memiliki izin untuk membaca clipboard, atau gunakan tombol Tambah Foto.');
         }
     });
 
