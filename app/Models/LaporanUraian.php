@@ -47,21 +47,20 @@ class LaporanUraian extends Model
     }
 
     /**
-     * Uraian dipecah menjadi potongan (maksimal ~beberapa kalimat) untuk
-     * dicetak sebagai baris tabel tersendiri di PDF. dompdf memindahkan satu
-     * <tr> secara utuh ke halaman berikutnya bila tidak muat — bila satu
-     * paragraf panjang jadi satu baris, ini bisa menyisakan banyak ruang
-     * kosong di akhir halaman, atau (untuk paragraf yang lebih tinggi dari satu
-     * halaman) tidak muat sama sekali. Memecah pada batas kalimat membuat teks
-     * mengalir mengisi & menyambung antar-halaman.
+     * Uraian dipecah menjadi sekumpulan potongan HTML kecil, satu potongan =
+     * satu baris tabel di PDF.
      *
-     * Pemisahan memakai preg_split (BUKAN preg_match_all yang diam-diam membuang
-     * teks yang tak cocok pola) dengan lookbehind/lookahead yang hanya memisah
-     * pada . ! ? yang benar-benar mengakhiri kalimat (diikuti spasi lalu huruf
-     * kapital). Dengan begitu angka desimal (08.00, Rp820.000), persen (17,07%),
-     * maupun kode (HD-5.1) TIDAK ikut terpecah dan tidak ada teks yang hilang.
+     * dompdf (mesin cetak) TIDAK memecah satu <tr> pada batas halaman selama
+     * baris itu masih muat di halaman berikutnya — ia justru memindahkan
+     * seluruh baris ke halaman baru, menyisakan ruang kosong besar di akhir
+     * halaman sebelumnya (persis bug "PDF kacau" yang terlihat). Dengan
+     * memecah uraian panjang menjadi banyak baris kecil (per-paragraf, dan
+     * per-kalimat untuk paragraf teks-murni yang panjang), tiap baris mudah
+     * muat sehingga teks mengalir mengisi halaman tanpa celah.
      *
-     * @return array<int, array{text: string, new_paragraph: bool}>
+     * Setiap elemen array adalah HTML siap-tempel untuk satu sel Uraian.
+     *
+     * @return array<int, string>
      */
     public function getUraianChunksAttribute(): array
     {
@@ -70,78 +69,50 @@ class LaporanUraian extends Model
             return [];
         }
 
-        // Ambil blok mentah: tiap <p>/<div>/<figure> untuk HTML (editor WYSIWYG)
+        // ---- HTML dari editor WYSIWYG (CKEditor) ----
         if ($text !== strip_tags($text)) {
-            // Ini adalah HTML dari editor. Kita ubah gambar menjadi base64 dan tidak memecahnya.
-            // Gunakan preg_replace_callback untuk mengganti src="..." menjadi base64 data URI.
+            // Ubah <img src="/storage/..."> menjadi data URI base64 agar tampil
+            // di PDF (dompdf tidak memuat berkas remote di sini).
             $html = preg_replace_callback('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', function ($matches) {
                 $url = $matches[1];
-                $appUrl = config('app.url');
-                $storageUrl = \Illuminate\Support\Facades\Storage::url(''); // misal /storage/
-                
-                // Jika URL mengarah ke storage kita
+                $appUrl = rtrim((string) config('app.url'), '/');
+                $storageUrl = \Illuminate\Support\Facades\Storage::url(''); // mis. /storage/
+
                 if (str_starts_with($url, $appUrl . $storageUrl) || str_starts_with($url, $storageUrl)) {
-                    $path = str_replace([$appUrl . $storageUrl, $storageUrl], '', $url);
-                    $path = ltrim($path, '/');
+                    $path = ltrim(str_replace([$appUrl . $storageUrl, $storageUrl], '', $url), '/');
                     $absPath = \Illuminate\Support\Facades\Storage::disk('public')->path($path);
-                    
+
                     if ($base64 = \App\Support\PdfImage::dataUri($absPath)) {
                         return str_replace($url, $base64, $matches[0]);
                     }
                 }
+
                 return $matches[0];
             }, $text);
-            
-            // Kita kumpulkan elemen block-level (p, div, figure, table, ul, ol, dll)
-            // agar setiap block menjadi 1 chunk, sehingga dompdf bisa memecah halaman antar-block.
-            if (preg_match_all('/<(p|div|figure|table|ul|ol|h[1-6])\b[^>]*>.*?<\/\1>/is', $html, $m)) {
-                $chunks = [];
-                foreach ($m[0] as $i => $blockHtml) {
-                    $chunks[] = ['text' => trim($blockHtml), 'new_paragraph' => true];
-                }
-                if (!empty($chunks)) {
-                    return $chunks;
-                }
+
+            // Pecah menjadi elemen block-level level-atas (tiap <p>, <figure>,
+            // <ul>, <table>, dst.) agar tiap block bisa jatuh di halaman berbeda.
+            $blocks = [];
+            if (preg_match_all('/<(p|div|figure|table|ul|ol|h[1-6]|blockquote|pre)\b[^>]*>.*?<\/\1>/is', $html, $m)) {
+                $blocks = $m[0];
             }
-            
-            // Fallback jika regex block tidak cocok
-            return [['text' => $html, 'new_paragraph' => true]];
+            if (empty($blocks)) {
+                $blocks = [$html];
+            }
+
+            return $blocks;
         }
 
-        // Teks biasa (tidak mengandung tag HTML)
+        // ---- Teks biasa (tanpa tag HTML) ----
         $blocks = preg_split('/\n\s*\n/', $text) ?: [$text];
-
-        // Tiap blok non-kosong = satu paragraf (sesuai input pengguna).
-        $paragraphs = [];
-        foreach ($blocks as $block) {
-            $plain = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $block));
-            if ($plain !== '') {
-                $paragraphs[] = $plain;
-            }
-        }
-
-        $maxLen = 480;
         $chunks = [];
-        foreach ($paragraphs as $pi => $paragraph) {
-            // Pisah aman pada batas kalimat; tidak ada teks yang hilang.
-            $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z"\'])/u', $paragraph, -1, PREG_SPLIT_NO_EMPTY) ?: [$paragraph];
-
-            // Gabungkan kalimat berurutan sampai mendekati $maxLen karakter.
-            $buffer = '';
-            $isFirstChunk = true;
-            foreach ($sentences as $sentence) {
-                $candidate = $buffer === '' ? $sentence : $buffer.' '.$sentence;
-                if ($buffer !== '' && mb_strlen($candidate) > $maxLen) {
-                    $chunks[] = ['text' => e($buffer), 'new_paragraph' => $pi > 0 && $isFirstChunk];
-                    $isFirstChunk = false;
-                    $buffer = $sentence;
-                } else {
-                    $buffer = $candidate;
-                }
+        foreach ($blocks as $block) {
+            $plain = trim($block);
+            if ($plain === '') {
+                continue;
             }
-            if ($buffer !== '') {
-                $chunks[] = ['text' => e($buffer), 'new_paragraph' => $pi > 0 && $isFirstChunk];
-            }
+            // Langsung masukkan satu paragraf utuh tanpa dipecah per kalimat
+            $chunks[] = '<p>' . nl2br(e($plain)) . '</p>';
         }
 
         return $chunks;

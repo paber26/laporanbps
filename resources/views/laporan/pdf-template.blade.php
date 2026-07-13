@@ -34,23 +34,17 @@
         table.uraian { width: 100%; border-collapse: collapse; }
         table.uraian th, table.uraian td { border: 1px solid #000; padding: 5pt 6pt; vertical-align: top; text-align: left; font-size: 11pt; }
         table.uraian th { text-align: center; font-weight: bold; }
-        /* Uraian panjang dipecah menjadi banyak baris kecil (~12 kata) agar teks
-           bisa mengalir mengisi halaman — dompdf memindahkan satu <tr> secara utuh
-           ke halaman berikutnya bila tak muat, jadi baris besar menyisakan banyak
-           ruang kosong. Batas atas/bawah antar-baris dalam satu hari dihilangkan
-           sehingga tetap tampil sebagai satu blok utuh; jarak antar-baris dibuat
-           rapat & konsisten, dengan sedikit jarak ekstra hanya di awal paragraf
-           baru agar paragraf tetap terlihat terpisah. */
-        table.uraian tr.chunk td { padding-top: 1pt; padding-bottom: 1pt; }
-        table.uraian tr.chunk.para-start td:last-child { padding-top: 7pt; }
-        table.uraian tr.cont td { border-top: none; }
-        table.uraian tr.open td { border-bottom: none; }
-        table.uraian thead tr:last-child th { border-bottom: none; }
-        .uraian-body {
-            border: 1px solid #000; 
-            border-top: none;
-            font-size: 11pt;
-        }
+        table.uraian td.uraian-cell { text-align: justify; }
+        table.uraian td.uraian-cell p { margin: 0; }
+        /* Uraian panjang dipecah menjadi banyak baris kecil (per-paragraf /
+           per-kalimat) agar teks mengalir mengisi halaman — dompdf memindahkan
+           satu <tr> secara utuh ke halaman berikutnya bila tak muat, sehingga
+           baris besar menyisakan banyak ruang kosong. Garis horizontal internal
+           antar-baris dalam satu hari disembunyikan (border-top/-bottom) supaya
+           potongan-potongan itu tampil sebagai satu sel utuh; garis vertikal
+           kolom tetap tergambar di tiap baris. */
+        table.uraian tr.cont > td { border-top: none; }
+        table.uraian tr.open > td { border-bottom: none; }
         .col-tgl { width: 22%; }
         .col-jam { width: 15%; }
         .foto-grid { width: 100%; border-collapse: collapse; }
@@ -59,9 +53,9 @@
         .foto-cap { font-size: 10pt; margin-top: 4pt; }
         
         /* Fix gambar dari CKEditor agar tidak melebihi kertas */
-        table.uraian img, .uraian-body img { max-width: 100% !important; height: auto !important; }
-        table.uraian figure.image, .uraian-body figure.image { margin: 5pt 0; text-align: center; }
-        table.uraian figure.image figcaption, .uraian-body figure.image figcaption { font-size: 9pt; color: #555; }
+        table.uraian img { max-width: 100% !important; height: auto !important; }
+        table.uraian figure.image { margin: 5pt 0; text-align: center; }
+        table.uraian figure.image figcaption { font-size: 9pt; color: #555; }
     </style>
 </head>
 <body>
@@ -136,7 +130,7 @@
         {{ $laporan->pegawai->unit_kerja }}
     </div>
 
-    <table class="uraian" style="margin-bottom: 0;">
+    <table class="uraian">
         <thead>
             <tr>
                 <th class="col-tgl">Hari/Tanggal</th>
@@ -147,35 +141,41 @@
                 <th>(1)</th><th>(2)</th><th>(3)</th>
             </tr>
         </thead>
+        <tbody>
+            @forelse ($laporan->uraians as $u)
+                @php
+                    $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
+                    $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
+                    $chunks = $u->uraian_chunks;
+                    $n = count($chunks);
+                @endphp
+                @if ($n === 0)
+                    <tr>
+                        <td class="col-tgl">{{ $tgl }}</td>
+                        <td class="col-jam">{{ $jam }}</td>
+                        <td class="uraian-cell"></td>
+                    </tr>
+                @else
+                    {{-- Satu hari kegiatan dipecah menjadi beberapa baris (chunk).
+                         Hari/Jam hanya ditulis pada baris pertama; garis horizontal
+                         internal disembunyikan lewat kelas cont/open agar tampil
+                         sebagai satu blok utuh, sekaligus membiarkan teks mengalir
+                         antar-halaman tanpa celah kosong. --}}
+                    @foreach ($chunks as $ci => $chunk)
+                        <tr @class(['cont' => $ci > 0, 'open' => $ci < $n - 1])>
+                            <td class="col-tgl">{{ $ci === 0 ? $tgl : '' }}</td>
+                            <td class="col-jam">{{ $ci === 0 ? $jam : '' }}</td>
+                            <td class="uraian-cell">{!! $chunk !!}</td>
+                        </tr>
+                    @endforeach
+                @endif
+            @empty
+                <tr>
+                    <td colspan="3" style="text-align: center;">Belum ada uraian kegiatan.</td>
+                </tr>
+            @endforelse
+        </tbody>
     </table>
-    <div class="uraian-body">
-        @forelse ($laporan->uraians as $u)
-            @php
-                $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
-                $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
-            @endphp
-            <div style="border-top: {{ $loop->first ? 'none' : '1px solid #000' }}; position: relative;">
-                
-                <div style="border-left: 1px solid #000; margin-left: 22%;">
-                    <div style="border-left: 1px solid #000; margin-left: 19.230769%;">
-                        <div style="padding: 5pt 6pt;">
-                            {!! $u->uraian_html !!}
-                        </div>
-                    </div>
-                </div>
-
-                <div style="position: absolute; left: 0; top: 0; width: 22%;">
-                    <div style="padding: 5pt 6pt;">{{ $tgl }}</div>
-                </div>
-                <div style="position: absolute; left: 22%; top: 0; width: 15%;">
-                    <div style="padding: 5pt 6pt;">{{ $jam }}</div>
-                </div>
-
-            </div>
-        @empty
-            <div style="padding: 5pt 6pt; text-align: center;">Belum ada uraian kegiatan.</div>
-        @endforelse
-    </div>
 
     <table class="ttd-mengetahui">
         <tr>
