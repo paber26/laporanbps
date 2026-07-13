@@ -40,7 +40,39 @@ class PdfImage
 
         $img = @imagecreatefromstring($raw);
         if ($img === false) {
-            // Format tak dikenal GD (mis. HEIC) — coba sematkan apa adanya.
+            // Jika GD gagal (mungkin format WEBP atau HEIC yang tidak didukung GD di server ini),
+            // coba gunakan Imagick untuk mengonversi ke JPEG sebelum disematkan.
+            if (class_exists('Imagick')) {
+                try {
+                    $imagick = new \Imagick();
+                    $imagick->readImageBlob($raw);
+                    $imagick->setImageFormat('jpeg');
+                    $imagick->setImageCompressionQuality($quality);
+                    // Resize jika perlu
+                    $width = $imagick->getImageWidth();
+                    $height = $imagick->getImageHeight();
+                    $scale = min(1, $maxDim / max($width, $height));
+                    if ($scale < 1) {
+                        $imagick->resizeImage(
+                            max(1, (int) round($width * $scale)),
+                            max(1, (int) round($height * $scale)),
+                            \Imagick::FILTER_LANCZOS,
+                            1
+                        );
+                    }
+                    $jpegBlob = $imagick->getImageBlob();
+                    $imagick->clear();
+                    $imagick->destroy();
+                    
+                    if ($jpegBlob) {
+                        return 'data:image/jpeg;base64,'.base64_encode($jpegBlob);
+                    }
+                } catch (\Throwable $e) {
+                    // Imagick gagal, fallback ke mentah
+                }
+            }
+            
+            // Fallback terakhir: sematkan apa adanya (jika dompdf tidak dukung, gambar akan blank/hilang)
             return self::rawDataUri($absolutePath);
         }
         unset($raw);
