@@ -49,7 +49,7 @@
         .uraian-body {
             border: 1px solid #000; 
             border-top: none;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="1" preserveAspectRatio="none"><rect x="22" y="0" width="0.15" height="1" fill="black"/><rect x="37" y="0" width="0.15" height="1" fill="black"/></svg>');
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+PHJlY3QgeD0iMjIiIHk9IjAiIHdpZHRoPSIwLjIiIGhlaWdodD0iMSIgZmlsbD0iYmxhY2siLz48cmVjdCB4PSIzNyIgeT0iMCIgd2lkdGg9IjAuMiIgaGVpZ2h0PSIxIiBmaWxsPSJibGFjayIvPjwvc3ZnPg==');
             background-size: 100% 1px;
             background-repeat: repeat-y;
             font-size: 11pt;
@@ -158,14 +158,16 @@
                 $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
             @endphp
             <div style="border-top: {{ $loop->first ? 'none' : '1px solid #000' }}; clear: both;">
-                <div style="float: left; width: 22%; padding: 5pt 6pt; box-sizing: border-box;">
-                    {{ $tgl }}
+                <div style="float: left; width: 22%;">
+                    <div style="padding: 5pt 6pt;">{{ $tgl }}</div>
                 </div>
-                <div style="float: left; width: 15%; padding: 5pt 6pt; box-sizing: border-box;">
-                    {{ $jam }}
+                <div style="float: left; width: 15%;">
+                    <div style="padding: 5pt 6pt;">{{ $jam }}</div>
                 </div>
-                <div style="margin-left: 37%; padding: 5pt 6pt; box-sizing: border-box;">
-                    {!! $u->uraian_html !!}
+                <div style="margin-left: 37%;">
+                    <div style="padding: 5pt 6pt;">
+                        {!! $u->uraian_html !!}
+                    </div>
                 </div>
                 <div style="clear: both;"></div>
             </div>
