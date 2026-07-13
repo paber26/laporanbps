@@ -1,10 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Preview Laporan</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Preview Laporan</h2>
             <div class="flex items-center gap-2">
                 <a href="{{ route('laporan.edit', $laporan) }}" class="px-3 py-2 text-sm bg-amber-500 text-white rounded-md hover:bg-amber-600">Edit</a>
-                <a href="{{ route('laporan.index') }}" class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800">Kembali</a>
+                <a href="{{ route('laporan.index') }}" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Kembali</a>
             </div>
         </div>
     </x-slot>
@@ -13,14 +13,14 @@
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
 
             @if (session('status'))
-                <div class="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-md">{{ session('status') }}</div>
+                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
             @endif
 
             {{-- Panel cetak --}}
-            <div class="bg-white shadow-sm rounded-lg p-4 flex flex-wrap items-center gap-3">
-                <span class="text-sm font-medium text-gray-700">Cetak Dokumen:</span>
-                <label class="text-sm text-gray-600">Ukuran Kertas
-                    <select id="ukuran-kertas" class="ml-1 border-gray-300 rounded-md text-sm">
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 flex flex-wrap items-center gap-3">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cetak Dokumen:</span>
+                <label class="text-sm text-gray-600 dark:text-gray-400">Ukuran Kertas
+                    <select id="ukuran-kertas" class="ml-1 border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md text-sm">
                         <option value="a4">A4</option>
                         <option value="f4">F4 / Folio</option>
                         <option value="legal">Legal</option>

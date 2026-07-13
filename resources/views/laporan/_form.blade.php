@@ -36,7 +36,7 @@
     @endif
 
     @if ($errors->any())
-        <div class="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-md mb-6">
+        <div class="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-4 py-3 rounded-md mb-6">
             <p class="font-medium">Periksa kembali isian berikut:</p>
             <ul class="list-disc list-inside text-sm mt-1">
                 @foreach ($errors->all() as $error)
@@ -50,12 +50,12 @@
         {{-- ===================== KOLOM KIRI ===================== --}}
         <div class="lg:col-span-4">
             {{-- ===================== DATA UMUM ===================== --}}
-            <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
-        <h3 class="font-semibold text-gray-800 border-b pb-2">Data Umum Laporan</h3>
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 space-y-4">
+        <h3 class="font-semibold text-gray-800 dark:text-gray-200 border-b pb-2">Data Umum Laporan</h3>
 
         <div>
             <x-input-label for="pegawai_id" value="Petugas (Pilih NIP)" />
-            <select id="pegawai_id" name="pegawai_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+            <select id="pegawai_id" name="pegawai_id" class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm" required>
                 <option value="">-- Pilih Petugas --</option>
                 @foreach ($pegawais as $p)
                     <option value="{{ $p->id }}" data-unit="{{ $p->unit_kerja }}"
@@ -64,7 +64,7 @@
                     </option>
                 @endforeach
             </select>
-            <p id="pegawai-info" class="text-xs text-gray-500 mt-1"></p>
+            <p id="pegawai-info" class="text-xs text-gray-500 dark:text-gray-400 mt-1"></p>
             <x-input-error :messages="$errors->get('pegawai_id')" class="mt-1" />
         </div>
 
@@ -73,20 +73,20 @@
             $pemb = $isEdit ? $laporan->pembiayaan : null;
             $pv = fn ($f) => old($f, $pemb?->{$f} ?? '');
         @endphp
-        <div class="border rounded-lg p-4 bg-gray-50 space-y-3">
+        <div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40 space-y-3">
             <div>
-                <p class="text-sm font-medium text-gray-700">Pembiayaan Kegiatan</p>
-                <p class="text-xs text-gray-500">Pilih dari daftar (Program → Kegiatan → RO → Komponen → Akun). Bila belum ada, pilih <b>“➕ Tambah … baru”</b> lalu ketik nilainya. Kosongkan bila tidak diisi.</p>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Pembiayaan Kegiatan</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Pilih dari daftar (Program → Kegiatan → RO → Komponen → Akun). Bila belum ada, pilih <b>“➕ Tambah … baru”</b> lalu ketik nilainya. Kosongkan bila tidak diisi.</p>
             </div>
             @foreach (['program' => 'Program', 'kegiatan' => 'Kegiatan', 'ro' => 'RO (Rincian Output)', 'komponen' => 'Komponen', 'akun' => 'Akun'] as $field => $label)
                 <div>
                     <x-input-label :value="$label" />
                     <div class="pemb-group mt-1" data-level="{{ $field }}">
-                        <select class="pemb-select block w-full border-gray-300 rounded-md shadow-sm text-sm" data-label="{{ $label }}">
+                        <select class="pemb-select block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" data-label="{{ $label }}">
                             <option value="">-- Pilih {{ $label }} --</option>
                             <option value="__new__">➕ Tambah {{ strtolower($label) }} baru…</option>
                         </select>
-                        <input type="text" class="pemb-new hidden mt-2 block w-full border-gray-300 rounded-md shadow-sm text-sm"
+                        <input type="text" class="pemb-new hidden mt-2 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm"
                             placeholder="Ketik {{ strtolower($label) }} baru">
                         <input type="hidden" name="{{ $field }}" class="pemb-value" value="{{ $pv($field) }}">
                     </div>
@@ -142,42 +142,42 @@
         {{-- ===================== KOLOM KANAN ===================== --}}
         <div class="lg:col-span-8 space-y-6">
             {{-- ===================== LAMPIRAN 1: URAIAN ===================== --}}
-            <div class="bg-white shadow-sm rounded-lg p-6">
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
         <div class="flex items-center justify-between border-b pb-2 mb-4">
-            <h3 class="font-semibold text-gray-800">Lampiran 1 — Uraian Kegiatan</h3>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200">Lampiran 1 — Uraian Kegiatan</h3>
             <button type="button" id="btn-add-uraian" class="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700">+ Tambah Uraian</button>
         </div>
 
         <div id="uraian-container" class="space-y-4">
             @foreach ($uraianRows as $i => $row)
-                <div class="uraian-row border rounded-lg p-4 bg-gray-50">
+                <div class="uraian-row border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-gray-600">Kegiatan #<span class="uraian-num">{{ $i + 1 }}</span></span>
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Kegiatan #<span class="uraian-num">{{ $i + 1 }}</span></span>
                         <button type="button" class="btn-remove-uraian text-rose-600 text-sm hover:underline">Hapus</button>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                         <div>
-                            <label class="text-xs text-gray-500">Tanggal Kegiatan</label>
+                            <label class="text-xs text-gray-500 dark:text-gray-400">Tanggal Kegiatan</label>
                             <input type="date" name="uraians[{{ $i }}][tanggal_kegiatan]" value="{{ $row['tanggal_kegiatan'] ?? '' }}"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" required>
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" required>
                         </div>
                         <div>
-                            <label class="text-xs text-gray-500">Jam Mulai</label>
+                            <label class="text-xs text-gray-500 dark:text-gray-400">Jam Mulai</label>
                             <input type="text" name="uraians[{{ $i }}][jam_mulai]" value="{{ $row['jam_mulai'] ?? '' }}"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="08.00">
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" placeholder="08.00">
                         </div>
                         <div>
-                            <label class="text-xs text-gray-500">Jam Selesai</label>
+                            <label class="text-xs text-gray-500 dark:text-gray-400">Jam Selesai</label>
                             <input type="text" name="uraians[{{ $i }}][jam_selesai]" value="{{ $row['jam_selesai'] ?? '' }}"
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="17.45 WITA">
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" placeholder="17.45 WITA">
                         </div>
                     </div>
                     <div>
-                        <label class="text-xs text-gray-500">Uraian Kegiatan</label>
+                        <label class="text-xs text-gray-500 dark:text-gray-400">Uraian Kegiatan</label>
                         {{-- Tanpa atribut `required`: CKEditor menyembunyikan textarea sehingga
                              validasi `required` bawaan browser akan memblokir submit. Validasi
                              tetap dijalankan di sisi server. --}}
-                        <textarea class="uraian-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"
+                        <textarea class="uraian-editor mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm"
                             name="uraians[{{ $i }}][uraian_text]" rows="6">{{ $row['uraian_text'] ?? '' }}</textarea>
                     </div>
                 </div>
@@ -186,20 +186,20 @@
             </div>
 
             {{-- ===================== LAMPIRAN 2: DOKUMENTASI ===================== --}}
-            <div class="bg-white shadow-sm rounded-lg p-6">
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
         <div class="flex items-center justify-between border-b pb-2 mb-4">
-            <h3 class="font-semibold text-gray-800">Lampiran 2 — Dokumentasi (Foto)</h3>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200">Lampiran 2 — Dokumentasi (Foto)</h3>
             <button type="button" id="btn-add-dok" class="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700">+ Tambah Foto</button>
         </div>
 
         @if ($isEdit && $laporan->dokumentasis->count())
             <div class="mb-4">
-                <p class="text-sm font-medium text-gray-600 mb-2">Foto yang sudah ada</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Foto yang sudah ada</p>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                     @foreach ($laporan->dokumentasis as $dok)
                         <label class="border rounded-lg p-2 block cursor-pointer">
                             <img src="{{ $dok->url }}" class="w-full h-28 object-cover rounded" alt="dokumentasi">
-                            <p class="text-xs text-gray-500 mt-1 truncate">{{ $dok->keterangan }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ $dok->keterangan }}</p>
                             <span class="mt-1 inline-flex items-center gap-1 text-xs text-rose-600">
                                 <input type="checkbox" name="hapus_dokumentasi[]" value="{{ $dok->id }}"> Hapus
                             </span>
@@ -213,72 +213,72 @@
             {{-- Saat validasi gagal, bangun ulang baris foto dari input sebelumnya (server-side). --}}
             @foreach (old('dokumentasi', []) as $i => $d)
                 @php $dp = $d['path'] ?? ''; $durl = $dp ? \Storage::url($dp) : ''; @endphp
-                <div class="dok-row border rounded-lg p-4 bg-gray-50"
+                <div class="dok-row border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40"
                     @if ($dp) data-path="{{ $dp }}" data-url="{{ $durl }}" data-name="{{ basename($dp) }}" @endif>
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-600">Foto</span>
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Foto</span>
                         <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
                     </div>
                     <input type="file" name="dokumentasi[{{ $i }}][file]" accept="image/*,.heic,.heif" class="dok-file block w-full text-sm mb-2">
                     <input type="hidden" class="dok-path" name="dokumentasi[{{ $i }}][path]" value="{{ $dp }}">
                     <img class="dok-preview {{ $dp ? '' : 'hidden' }} mb-2 h-32 w-full object-cover rounded border" src="{{ $durl }}" alt="preview foto">
                     <p class="dok-saved-note {{ $dp ? '' : 'hidden' }} text-xs text-emerald-600 mb-2">✓ Gambar terunggah ke server — tetap ada setelah refresh.</p>
-                    <p class="dok-uploading hidden text-xs text-gray-500 mb-2">Mengunggah…</p>
-                    <input type="text" name="dokumentasi[{{ $i }}][keterangan]" value="{{ $d['keterangan'] ?? '' }}" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+                    <p class="dok-uploading hidden text-xs text-gray-500 dark:text-gray-400 mb-2">Mengunggah…</p>
+                    <input type="text" name="dokumentasi[{{ $i }}][keterangan]" value="{{ $d['keterangan'] ?? '' }}" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm">
                 </div>
             @endforeach
         </div>
-        <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center justify-between">
-            <p class="text-xs text-blue-800">
+        <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-md flex items-center justify-between">
+            <p class="text-xs text-blue-800 dark:text-blue-200">
                 <span class="font-semibold">Tips:</span> Anda bisa klik tombol di samping untuk mengambil foto dari clipboard secara otomatis.
             </p>
             <button type="button" id="btn-paste-clipboard" class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 font-medium">Paste Foto dari Clipboard</button>
         </div>
-        <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP/HEIC, maks 5MB per foto (HEIC dari iPhone otomatis dikonversi ke JPG). Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Format: JPG/PNG/WEBP/HEIC, maks 5MB per foto (HEIC dari iPhone otomatis dikonversi ke JPG). Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
             </div>
         </div>
     </div>
 
     {{-- ===================== TEMPLATE (untuk JS repeater) ===================== --}}
     <template id="tpl-uraian">
-        <div class="uraian-row border rounded-lg p-4 bg-gray-50">
+        <div class="uraian-row border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40">
             <div class="flex items-center justify-between mb-3">
-                <span class="text-sm font-medium text-gray-600">Kegiatan #<span class="uraian-num"></span></span>
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Kegiatan #<span class="uraian-num"></span></span>
                 <button type="button" class="btn-remove-uraian text-rose-600 text-sm hover:underline">Hapus</button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <div>
-                    <label class="text-xs text-gray-500">Tanggal Kegiatan</label>
-                    <input type="date" name="uraians[__I__][tanggal_kegiatan]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" required>
+                    <label class="text-xs text-gray-500 dark:text-gray-400">Tanggal Kegiatan</label>
+                    <input type="date" name="uraians[__I__][tanggal_kegiatan]" class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" required>
                 </div>
                 <div>
-                    <label class="text-xs text-gray-500">Jam Mulai</label>
-                    <input type="text" name="uraians[__I__][jam_mulai]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="08.00">
+                    <label class="text-xs text-gray-500 dark:text-gray-400">Jam Mulai</label>
+                    <input type="text" name="uraians[__I__][jam_mulai]" class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" placeholder="08.00">
                 </div>
                 <div>
-                    <label class="text-xs text-gray-500">Jam Selesai</label>
-                    <input type="text" name="uraians[__I__][jam_selesai]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" placeholder="17.45 WITA">
+                    <label class="text-xs text-gray-500 dark:text-gray-400">Jam Selesai</label>
+                    <input type="text" name="uraians[__I__][jam_selesai]" class="mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" placeholder="17.45 WITA">
                 </div>
             </div>
             <div>
-                <label class="text-xs text-gray-500">Uraian Kegiatan</label>
-                <textarea class="uraian-editor mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" name="uraians[__I__][uraian_text]" rows="6"></textarea>
+                <label class="text-xs text-gray-500 dark:text-gray-400">Uraian Kegiatan</label>
+                <textarea class="uraian-editor mt-1 block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm" name="uraians[__I__][uraian_text]" rows="6"></textarea>
             </div>
         </div>
     </template>
 
     <template id="tpl-dok">
-        <div class="dok-row border rounded-lg p-4 bg-gray-50">
+        <div class="dok-row border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-600">Foto</span>
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Foto</span>
                 <button type="button" class="btn-remove-dok text-rose-600 text-sm hover:underline">Hapus</button>
             </div>
             <input type="file" name="dokumentasi[__I__][file]" accept="image/*,.heic,.heif" class="dok-file block w-full text-sm mb-2">
             <input type="hidden" class="dok-path" name="dokumentasi[__I__][path]">
             <img class="dok-preview hidden mb-2 h-32 w-full object-cover rounded border" alt="preview foto">
             <p class="dok-saved-note hidden text-xs text-emerald-600 mb-2">✓ Gambar terunggah ke server — tetap ada setelah refresh.</p>
-            <p class="dok-uploading hidden text-xs text-gray-500 mb-2">Mengunggah…</p>
-            <input type="text" name="dokumentasi[__I__][keterangan]" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 rounded-md shadow-sm text-sm">
+            <p class="dok-uploading hidden text-xs text-gray-500 dark:text-gray-400 mb-2">Mengunggah…</p>
+            <input type="text" name="dokumentasi[__I__][keterangan]" placeholder="Keterangan (opsional)" class="block w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-sm text-sm">
         </div>
     </template>
 

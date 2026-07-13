@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   Dark mode untuk CKEditor 5.
+   Hanya penyesuaian tampilan (warna) saat kelas .dark aktif; TIDAK
+   memengaruhi HTML yang tersimpan — warna teks di sini murni CSS editor,
+   tidak ikut disimpan ke uraian_text kecuali pengguna set warna sendiri.
+   ============================================================ */
+.dark .ck.ck-editor {
+    --ck-color-base-background: #111827;      /* gray-900 */
+    --ck-color-base-foreground: #1f2937;      /* gray-800 */
+    --ck-color-base-border: #374151;          /* gray-700 */
+    --ck-color-toolbar-background: #1f2937;   /* gray-800 */
+    --ck-color-toolbar-border: #374151;
+    --ck-color-text: #e5e7eb;                 /* gray-200 */
+    --ck-color-button-default-background: transparent;
+    --ck-color-button-default-hover-background: #374151;
+    --ck-color-button-on-background: #374151;
+    --ck-color-button-on-hover-background: #4b5563;
+    --ck-color-panel-background: #1f2937;
+    --ck-color-panel-border: #374151;
+    --ck-color-dropdown-panel-background: #1f2937;
+    --ck-color-input-background: #111827;
+    --ck-color-input-border: #374151;
+    --ck-color-list-background: #1f2937;
+    --ck-color-list-button-hover-background: #374151;
+}
+
+.dark .ck.ck-content,
+.dark .ck-editor__editable {
+    background: #111827 !important;
+    color: #e5e7eb;
+}
+
+.dark .ck.ck-toolbar .ck.ck-icon,
+.dark .ck.ck-button .ck-button__label {
+    color: #e5e7eb;
+}
+
+.dark .ck.ck-editor__main > .ck-editor__editable:not(.ck-focused) {
+    border-color: #374151;
+}
