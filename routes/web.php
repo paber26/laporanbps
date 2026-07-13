@@ -17,6 +17,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Cetak dokumen (didefinisikan sebelum resource agar tidak bentrok dengan {laporan}).
     Route::get('laporan/{laporan}/pdf', [LaporanController::class, 'exportPdf'])->name('laporan.pdf');
     Route::get('laporan/{laporan}/word', [LaporanController::class, 'exportWord'])->name('laporan.word');
+    
+    // Duplikat Laporan
+    Route::post('laporan/{laporan}/duplicate', [LaporanController::class, 'duplicate'])->name('laporan.duplicate');
 
     // Unggah/hapus foto dokumentasi sebagai draft (langsung tersimpan ke storage
     // sebelum laporan disubmit) via AJAX.

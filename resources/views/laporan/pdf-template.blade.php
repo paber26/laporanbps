@@ -201,16 +201,28 @@
         <table class="foto-grid">
             @foreach ($laporan->dokumentasis->chunk(2) as $chunk)
                 <tr>
-                    @foreach ($chunk as $dok)
-                        @php
-                            $img = \App\Support\PdfImage::dataUri($dok->absolute_path);
+                    @if ($chunk->count() == 1)
+                        @php 
+                            $dok = $chunk->first(); 
+                            $img = \App\Support\PdfImage::dataUri($dok->absolute_path); 
                         @endphp
-                        <td>
-                            @if ($img)<img src="{{ $img }}" alt="dokumentasi">@endif
-                            @if ($dok->keterangan)<div class="foto-cap">{{ $dok->keterangan }}</div>@endif
+                        <td colspan="2" align="center">
+                            <div style="width: 50%; margin: 0 auto;">
+                                @if ($img)<img src="{{ $img }}" alt="dokumentasi">@endif
+                                @if ($dok->keterangan)<div class="foto-cap">{{ $dok->keterangan }}</div>@endif
+                            </div>
                         </td>
-                    @endforeach
-                    @if ($chunk->count() < 2)<td>&nbsp;</td>@endif
+                    @else
+                        @foreach ($chunk as $dok)
+                            @php
+                                $img = \App\Support\PdfImage::dataUri($dok->absolute_path);
+                            @endphp
+                            <td>
+                                @if ($img)<img src="{{ $img }}" alt="dokumentasi">@endif
+                                @if ($dok->keterangan)<div class="foto-cap">{{ $dok->keterangan }}</div>@endif
+                            </td>
+                        @endforeach
+                    @endif
                 </tr>
             @endforeach
         </table>

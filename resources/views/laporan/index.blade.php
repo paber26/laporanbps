@@ -48,7 +48,12 @@
                                         <div class="flex items-center justify-end gap-2 whitespace-nowrap">
                                             <a href="{{ route('laporan.show', $laporan) }}" class="text-gray-600 hover:text-indigo-600">Lihat</a>
                                             <a href="{{ route('laporan.edit', $laporan) }}" class="text-gray-600 hover:text-amber-600">Edit</a>
-                                            <form action="{{ route('laporan.destroy', $laporan) }}" method="POST" onsubmit="return confirm('Hapus laporan ini?')">
+                                            <form action="{{ route('laporan.duplicate', $laporan) }}" method="POST" onsubmit="return confirm('Duplikat laporan ini?')">
+                                               @csrf
+                                               <button type="submit" class="text-blue-500 hover:text-blue-700 font-medium px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded transition-colors text-sm">Duplikat</button>
+                                           </form>
+
+                                           <form action="{{ route('laporan.destroy', $laporan) }}" method="POST" onsubmit="return confirm('Hapus laporan ini?')">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-gray-600 hover:text-rose-600">Hapus</button>
                                             </form>

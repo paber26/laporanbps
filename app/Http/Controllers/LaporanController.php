@@ -149,6 +149,49 @@ class LaporanController extends Controller
     }
 
     /**
+     * Duplikat laporan beserta relasinya.
+     */
+    public function duplicate(Laporan $laporan): RedirectResponse
+    {
+        $laporan->load(['pembiayaan', 'uraians', 'dokumentasis']);
+
+        $new = DB::transaction(function () use ($laporan) {
+            $new = $laporan->replicate();
+            $new->judul_laporan = $new->judul_laporan . ' (Salinan)';
+            $new->save();
+
+            if ($laporan->pembiayaan) {
+                $new->pembiayaan()->create($laporan->pembiayaan->toArray());
+            }
+
+            foreach ($laporan->uraians as $u) {
+                $new->uraians()->create($u->toArray());
+            }
+
+            foreach ($laporan->dokumentasis as $dok) {
+                $oldPath = $dok->image_path;
+                $newPath = 'dokumentasi/' . $new->id . '/' . \Illuminate\Support\Str::random(40) . '.' . pathinfo($oldPath, PATHINFO_EXTENSION);
+                
+                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($oldPath)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->copy($oldPath, $newPath);
+                }
+
+                $new->dokumentasis()->create([
+                    'image_path' => $newPath,
+                    'keterangan' => $dok->keterangan,
+                    'urutan'     => $dok->urutan,
+                ]);
+            }
+            
+            return $new;
+        });
+
+        return redirect()
+            ->route('laporan.edit', $new)
+            ->with('status', 'Laporan berhasil diduplikat. Anda sedang mengedit salinannya.');
+    }
+
+    /**
      * Cetak PDF dengan pilihan ukuran kertas (A4 / F4 / Legal).
      */
     public function exportPdf(Request $request, Laporan $laporan): Response
