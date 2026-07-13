@@ -49,8 +49,13 @@
         .col-jam { width: 15%; }
         .foto-grid { width: 100%; border-collapse: collapse; }
         .foto-grid td { width: 50%; text-align: center; padding: 8pt; vertical-align: top; }
-        .foto-grid img { max-width: 100%; max-height: 220pt; border: 1px solid #333; }
+        .foto-grid img { width: 100%; height: auto; border: 1px solid #333; }
         .foto-cap { font-size: 10pt; margin-top: 4pt; }
+        
+        /* Fix gambar dari CKEditor agar tidak melebihi kertas */
+        table.uraian img { max-width: 100% !important; height: auto !important; }
+        table.uraian figure.image { margin: 5pt 0; text-align: center; }
+        table.uraian figure.image figcaption { font-size: 9pt; color: #555; }
     </style>
 </head>
 <body>
