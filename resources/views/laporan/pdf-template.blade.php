@@ -157,14 +157,14 @@
                 $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
                 $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
             @endphp
-            <div style="border-top: {{ $loop->first ? 'none' : '1px solid #000' }}; clear: both;">
-                <div style="float: left; width: 22%;">
+            <div style="border-top: {{ $loop->first ? 'none' : '1px solid #000' }}; position: relative;">
+                <div style="position: absolute; left: 0; top: 0; width: 22%;">
                     <div style="padding: 5pt 6pt;">{{ $tgl }}</div>
                 </div>
-                <div style="float: left; width: 15%;">
+                <div style="position: absolute; left: 22%; top: 0; width: 15%;">
                     <div style="padding: 5pt 6pt;">{{ $jam }}</div>
                 </div>
-                <div style="margin-left: 37%;">
+                <div style="padding-left: 37%;">
                     <div style="padding: 5pt 6pt;">
                         {!! $u->uraian_html !!}
                     </div>
