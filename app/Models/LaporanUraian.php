@@ -92,11 +92,43 @@ class LaporanUraian extends Model
                 return $matches[0];
             }, $text);
             
-            // Kita kumpulkan elemen block-level (p, div, figure, table, ul, ol, dll)
+            // Kita kumpulkan elemen block-level (p, div, figure, table, ul, ol, h[1-6])
             // agar setiap block menjadi 1 chunk, sehingga dompdf bisa memecah halaman antar-block.
             if (preg_match_all('/<(p|div|figure|table|ul|ol|h[1-6])\b[^>]*>.*?<\/\1>/is', $html, $m)) {
                 $chunks = [];
                 foreach ($m[0] as $i => $blockHtml) {
+                    // Coba pecah paragraf panjang yang HANYA berisi teks (tanpa tag inline seperti <strong> dll)
+                    if (preg_match('/^<(p|div)\b[^>]*>(.*)<\/\1>$/is', trim($blockHtml), $match)) {
+                        $innerHtml = trim($match[2]);
+                        if ($innerHtml !== '' && strip_tags($innerHtml) === $innerHtml) {
+                            $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z"\'])/u', $innerHtml, -1, PREG_SPLIT_NO_EMPTY) ?: [$innerHtml];
+                            $buffer = '';
+                            $isFirstChunk = true;
+                            $maxLen = 480;
+                            
+                            foreach ($sentences as $sentence) {
+                                $candidate = $buffer === '' ? $sentence : $buffer.' '.$sentence;
+                                if ($buffer !== '' && mb_strlen($candidate) > $maxLen) {
+                                    $chunks[] = [
+                                        'text' => '<div style="margin:0; text-align:justify;">' . e($buffer) . '</div>', 
+                                        'new_paragraph' => $isFirstChunk
+                                    ];
+                                    $isFirstChunk = false;
+                                    $buffer = $sentence;
+                                } else {
+                                    $buffer = $candidate;
+                                }
+                            }
+                            if ($buffer !== '') {
+                                $chunks[] = [
+                                    'text' => '<div style="margin:0; text-align:justify;">' . e($buffer) . '</div>', 
+                                    'new_paragraph' => $isFirstChunk
+                                ];
+                            }
+                            continue;
+                        }
+                    }
+                    
                     $chunks[] = ['text' => trim($blockHtml), 'new_paragraph' => true];
                 }
                 if (!empty($chunks)) {
