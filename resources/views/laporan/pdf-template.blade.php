@@ -49,9 +49,6 @@
         .uraian-body {
             border: 1px solid #000; 
             border-top: none;
-            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+PHJlY3QgeD0iMjIiIHk9IjAiIHdpZHRoPSIwLjIiIGhlaWdodD0iMSIgZmlsbD0iYmxhY2siLz48cmVjdCB4PSIzNyIgeT0iMCIgd2lkdGg9IjAuMiIgaGVpZ2h0PSIxIiBmaWxsPSJibGFjayIvPjwvc3ZnPg==');
-            background-size: 100% 1px;
-            background-repeat: repeat-y;
             font-size: 11pt;
         }
         .col-tgl { width: 22%; }
@@ -158,18 +155,22 @@
                 $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
             @endphp
             <div style="border-top: {{ $loop->first ? 'none' : '1px solid #000' }}; position: relative;">
+                
+                <div style="border-left: 1px solid #000; margin-left: 22%;">
+                    <div style="border-left: 1px solid #000; margin-left: 19.230769%;">
+                        <div style="padding: 5pt 6pt;">
+                            {!! $u->uraian_html !!}
+                        </div>
+                    </div>
+                </div>
+
                 <div style="position: absolute; left: 0; top: 0; width: 22%;">
                     <div style="padding: 5pt 6pt;">{{ $tgl }}</div>
                 </div>
                 <div style="position: absolute; left: 22%; top: 0; width: 15%;">
                     <div style="padding: 5pt 6pt;">{{ $jam }}</div>
                 </div>
-                <div style="padding-left: 37%;">
-                    <div style="padding: 5pt 6pt;">
-                        {!! $u->uraian_html !!}
-                    </div>
-                </div>
-                <div style="clear: both;"></div>
+
             </div>
         @empty
             <div style="padding: 5pt 6pt; text-align: center;">Belum ada uraian kegiatan.</div>
