@@ -434,6 +434,12 @@
                         'imageStyle:side'
                     ]
                 },
+                simpleUpload: {
+                    uploadUrl: '{{ route('laporan.uraian.upload-image') }}',
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF
+                    }
+                },
                 table: {
                     contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties'],
                 },

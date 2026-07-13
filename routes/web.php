@@ -22,6 +22,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // sebelum laporan disubmit) via AJAX.
     Route::post('laporan-dokumentasi/draft', [LaporanController::class, 'uploadDraft'])->name('laporan.dokumentasi.draft');
     Route::delete('laporan-dokumentasi/draft', [LaporanController::class, 'deleteDraft'])->name('laporan.dokumentasi.draft.delete');
+    
+    // Unggah foto dari CKEditor (Uraian Kegiatan)
+    Route::post('laporan-uraian/upload-image', [LaporanController::class, 'uploadUraianImage'])->name('laporan.uraian.upload-image');
 
     Route::resource('laporan', LaporanController::class);
     Route::resource('master-pembiayaan', MasterPembiayaanController::class)

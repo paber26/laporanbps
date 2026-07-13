@@ -48,7 +48,7 @@ import {
     ImageStyle,
     ImageToolbar,
     ImageUpload,
-    Base64UploadAdapter,
+    SimpleUploadAdapter,
     PictureEditing,
 } from 'ckeditor5';
 import 'ckeditor5/ckeditor5.css';
@@ -68,7 +68,7 @@ window.CKEditorBundle = {
         FontSize, FontColor, FontBackgroundColor, Highlight, RemoveFormat, HorizontalLine,
         SpecialCharacters, SpecialCharactersEssentials, SourceEditing, FindAndReplace,
         SelectAll, ShowBlocks, Fullscreen, WordCount, GeneralHtmlSupport,
-        Image, ImageCaption, ImageResize, ImageStyle, ImageToolbar, ImageUpload, Base64UploadAdapter, PictureEditing,
+        Image, ImageCaption, ImageResize, ImageStyle, ImageToolbar, ImageUpload, SimpleUploadAdapter, PictureEditing,
     ],
 };
 window.dispatchEvent(new Event('ckeditor5:ready'));

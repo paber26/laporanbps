@@ -17,6 +17,24 @@ use Symfony\Component\HttpFoundation\Response;
 class LaporanController extends Controller
 {
     /**
+     * Unggah foto dari CKEditor (Uraian Kegiatan).
+     */
+    public function uploadUraianImage(Request $request)
+    {
+        if ($request->hasFile('upload')) {
+            $file = $request->file('upload');
+            // Simpan ke tmp/uraian, secara permanen jika tidak dibersihkan cron. 
+            // Atau lebih baik langsung simpan ke folder ckeditor agar permanen.
+            $path = $this->storeImage($file, 'dokumentasi/uraian');
+            return response()->json([
+                'url' => Storage::disk('public')->url($path)
+            ]);
+        }
+
+        return response()->json(['error' => ['message' => 'Upload gagal.']], 400);
+    }
+
+    /**
      * Daftar laporan.
      */
     public function index(): View
