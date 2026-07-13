@@ -47,15 +47,19 @@ class LaporanUraian extends Model
     }
 
     /**
-     * Uraian dipecah menjadi potongan sepanjang ~2-4 kalimat (bukan seluruh
-     * paragraf) untuk dicetak sebagai baris tabel tersendiri di PDF. dompdf
-     * memindahkan satu <tr> secara utuh ke halaman berikutnya bila tidak
-     * muat — dengan paragraf penuh sebagai satu baris, ini bisa menyisakan
-     * banyak ruang kosong di akhir halaman. Memecah per beberapa kalimat
-     * (bukan per kata) menjaga agar tiap baris tabel tetap berisi teks yang
-     * mengalir wajar di dalam selnya (word-wrap normal, tanpa jarak baris
-     * buatan), sambil membatasi maksimum ruang yang terbuang saat halaman
-     * terpaksa berpindah di tengah paragraf panjang.
+     * Uraian dipecah menjadi potongan (maksimal ~beberapa kalimat) untuk
+     * dicetak sebagai baris tabel tersendiri di PDF. dompdf memindahkan satu
+     * <tr> secara utuh ke halaman berikutnya bila tidak muat — bila satu
+     * paragraf panjang jadi satu baris, ini bisa menyisakan banyak ruang
+     * kosong di akhir halaman, atau (untuk paragraf yang lebih tinggi dari satu
+     * halaman) tidak muat sama sekali. Memecah pada batas kalimat membuat teks
+     * mengalir mengisi & menyambung antar-halaman.
+     *
+     * Pemisahan memakai preg_split (BUKAN preg_match_all yang diam-diam membuang
+     * teks yang tak cocok pola) dengan lookbehind/lookahead yang hanya memisah
+     * pada . ! ? yang benar-benar mengakhiri kalimat (diikuti spasi lalu huruf
+     * kapital). Dengan begitu angka desimal (08.00, Rp820.000), persen (17,07%),
+     * maupun kode (HD-5.1) TIDAK ikut terpecah dan tidak ada teks yang hilang.
      *
      * @return array<int, array{text: string, new_paragraph: bool}>
      */
@@ -66,73 +70,51 @@ class LaporanUraian extends Model
             return [];
         }
 
-        // Ambil blok mentah: tiap <p>/<div> untuk HTML dari editor WYSIWYG,
-        // atau tiap baris untuk teks biasa.
+        // Ambil blok mentah: tiap <p>/<div> untuk HTML (editor WYSIWYG), atau
+        // tiap baris kosong-pemisah untuk teks biasa.
         if ($text !== strip_tags($text)) {
             if (preg_match_all('/<(p|div)\b[^>]*>(.*?)<\/\1>/is', $text, $m)) {
                 $blocks = $m[2];
             } else {
-                $blocks = preg_split('/<br\s*\/?>/i', $text) ?: [$text];
+                $blocks = preg_split('/(?:<br\s*\/?>\s*){2,}/i', $text) ?: [$text];
             }
         } else {
-            $blocks = preg_split('/\n/', $text) ?: [$text];
+            $blocks = preg_split('/\n\s*\n/', $text) ?: [$text];
         }
 
-        // Kelompokkan blok jadi paragraf: blok kosong (mis. <p>&nbsp;</p> dari
-        // baris kosong di editor, atau baris kosong di teks biasa) adalah
-        // PEMISAH paragraf sungguhan, bukan teks untuk ditampilkan. Blok
-        // berurutan TANPA pemisah kosong di antaranya digabung jadi satu
-        // paragraf — jadi setiap <p>/Enter dari pengguna TIDAK otomatis
-        // dianggap paragraf baru; hanya baris kosong (Enter dua kali) yang
-        // menandai paragraf baru, sesuai yang benar-benar diketik pengguna.
-        $groups = [[]];
+        // Tiap blok non-kosong = satu paragraf (sesuai input pengguna). Blok
+        // kosong (mis. <p>&nbsp;</p>) dibuang, bukan ditampilkan sebagai teks.
+        $paragraphs = [];
         foreach ($blocks as $block) {
-            $withBreaks = preg_replace('/<br\s*\/?>/i', "\n", $block);
+            $withBreaks = preg_replace('/<br\s*\/?>/i', ' ', $block);
             $plain = html_entity_decode(strip_tags($withBreaks), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $plain = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $plain));
-
-            if ($plain === '') {
-                if (! empty(end($groups))) {
-                    $groups[] = [];
-                }
-
-                continue;
+            if ($plain !== '') {
+                $paragraphs[] = $plain;
             }
-
-            $groups[count($groups) - 1][] = $plain;
         }
 
-        $maxLen = 320;
+        $maxLen = 480;
         $chunks = [];
-        foreach ($groups as $group) {
-            if (empty($group)) {
-                continue;
-            }
-            $paragraphText = implode(' ', $group);
+        foreach ($paragraphs as $pi => $paragraph) {
+            // Pisah aman pada batas kalimat; tidak ada teks yang hilang.
+            $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z"\'])/u', $paragraph, -1, PREG_SPLIT_NO_EMPTY) ?: [$paragraph];
 
-            // Pecah per kalimat (akhiri dengan . ! ? diikuti spasi/akhir teks),
-            // lalu gabungkan kalimat berurutan sampai mendekati $maxLen karakter.
-            preg_match_all('/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/', $paragraphText, $sm);
-            $sentences = $sm[0] ?: [$paragraphText];
-
+            // Gabungkan kalimat berurutan sampai mendekati $maxLen karakter.
             $buffer = '';
-            $isFirst = true;
+            $isFirstChunk = true;
             foreach ($sentences as $sentence) {
-                $sentence = trim($sentence);
-                if ($sentence === '') {
-                    continue;
-                }
                 $candidate = $buffer === '' ? $sentence : $buffer.' '.$sentence;
                 if ($buffer !== '' && mb_strlen($candidate) > $maxLen) {
-                    $chunks[] = ['text' => e($buffer), 'new_paragraph' => $isFirst];
-                    $isFirst = false;
+                    $chunks[] = ['text' => e($buffer), 'new_paragraph' => $pi > 0 && $isFirstChunk];
+                    $isFirstChunk = false;
                     $buffer = $sentence;
                 } else {
                     $buffer = $candidate;
                 }
             }
             if ($buffer !== '') {
-                $chunks[] = ['text' => e($buffer), 'new_paragraph' => $isFirst];
+                $chunks[] = ['text' => e($buffer), 'new_paragraph' => $pi > 0 && $isFirstChunk];
             }
         }
 
