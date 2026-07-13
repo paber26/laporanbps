@@ -46,8 +46,11 @@
         </div>
     @endif
 
-    {{-- ===================== DATA UMUM ===================== --}}
-    <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {{-- ===================== KOLOM KIRI ===================== --}}
+        <div class="lg:col-span-4">
+            {{-- ===================== DATA UMUM ===================== --}}
+            <div class="bg-white shadow-sm rounded-lg p-6 space-y-4">
         <h3 class="font-semibold text-gray-800 border-b pb-2">Data Umum Laporan</h3>
 
         <div>
@@ -133,10 +136,13 @@
                 <x-input-error :messages="$errors->get('lokasi_tujuan')" class="mt-1" />
             </div>
         </div>
-    </div>
+            </div>
+        </div>
 
-    {{-- ===================== LAMPIRAN 1: URAIAN ===================== --}}
-    <div class="bg-white shadow-sm rounded-lg p-6 mt-6">
+        {{-- ===================== KOLOM KANAN ===================== --}}
+        <div class="lg:col-span-8 space-y-6">
+            {{-- ===================== LAMPIRAN 1: URAIAN ===================== --}}
+            <div class="bg-white shadow-sm rounded-lg p-6">
         <div class="flex items-center justify-between border-b pb-2 mb-4">
             <h3 class="font-semibold text-gray-800">Lampiran 1 — Uraian Kegiatan</h3>
             <button type="button" id="btn-add-uraian" class="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700">+ Tambah Uraian</button>
@@ -177,10 +183,10 @@
                 </div>
             @endforeach
         </div>
-    </div>
+            </div>
 
-    {{-- ===================== LAMPIRAN 2: DOKUMENTASI ===================== --}}
-    <div class="bg-white shadow-sm rounded-lg p-6 mt-6">
+            {{-- ===================== LAMPIRAN 2: DOKUMENTASI ===================== --}}
+            <div class="bg-white shadow-sm rounded-lg p-6">
         <div class="flex items-center justify-between border-b pb-2 mb-4">
             <h3 class="font-semibold text-gray-800">Lampiran 2 — Dokumentasi (Foto)</h3>
             <button type="button" id="btn-add-dok" class="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700">+ Tambah Foto</button>
@@ -229,6 +235,8 @@
             <button type="button" id="btn-paste-clipboard" class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 font-medium">Paste Foto dari Clipboard</button>
         </div>
         <p class="text-xs text-gray-400 mt-2">Format: JPG/PNG/WEBP/HEIC, maks 5MB per foto (HEIC dari iPhone otomatis dikonversi ke JPG). Foto yang dipilih langsung terunggah &amp; tersimpan di server, jadi tetap muncul walau halaman di-refresh (belum perlu disubmit).</p>
+            </div>
+        </div>
     </div>
 
     {{-- ===================== TEMPLATE (untuk JS repeater) ===================== --}}
