@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KakController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\MasterPembiayaanController;
 use App\Http\Controllers\PegawaiController;
@@ -34,6 +35,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->parameters(['master-pembiayaan' => 'masterPembiayaan'])
         ->except('show');
     Route::resource('pegawai', PegawaiController::class)->except('show');
+
+    // Kerangka Acuan Kerja (KAK) + cetak.
+    Route::get('kak/{kak}/word', [KakController::class, 'exportWord'])->name('kak.word');
+    Route::get('kak/{kak}/pdf', [KakController::class, 'exportPdf'])->name('kak.pdf');
+    Route::resource('kak', KakController::class);
 });
 
 Route::middleware('auth')->group(function () {
