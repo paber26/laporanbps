@@ -144,32 +144,53 @@ class KakController extends Controller
             abort(404, 'Dokumen tidak ditemukan.');
         }
 
-        // DOCX → HTML via PhpWord
-        $tmpDocx = $disk->path($docxPath);
-        $phpWord = IOFactory::load($tmpDocx, 'Word2007');
+        // DOCX → HTML via PhpWord. PhpWord menghasilkan dokumen HTML *lengkap*
+        // (berisi <html>, <head> dengan <style>, dan <body>), jadi jangan
+        // dibungkus HTML utuh lagi. Ambil isi <body> saja agar DOM tetap valid
+        // untuk Dompdf, lalu balut dengan shell HTML yang rapi.
+        $phpWord = IOFactory::load($disk->path($docxPath), 'Word2007');
         $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
-        $html = '';
-        ob_start();
-        $htmlWriter->save('php://output');
-        $html = ob_get_clean();
+        $full = $htmlWriter->getContent();
 
-        // Wrap HTML with basic styling for A4 paper
+        // Ambil hanya bagian dalam <body>...</body>.
+        $body = '';
+        if (preg_match('/<body[^>]*>(.*)<\/body>/is', $full, $m)) {
+            $body = trim($m[1]);
+        }
+
+        // Ambil <style> dari PhpWord (berisi class seperti .Normal, class tabel,
+        // dll.) agar elemen yang memakai class tetap rapi. Buang aturan generik
+        // (body, *, table, hr, @page) yang bakal menimpa styling shell di atas.
+        $phpwordCss = '';
+        if (preg_match('/<style>(.*)<\/style>/is', $full, $m)) {
+            $phpwordCss = $this->sanitizePhpWordCss($m[1]);
+        }
+
+        // Ukuran kertas untuk CSS @page (dari paperSize; array diubah ke inci).
+        $paperSizeCss = is_array($paper) ? sprintf('%fpt %fpt', $paper[2], $paper[3]) : $paper;
+
         $fullHtml = <<<HTML
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <meta charset="utf-8">
-    <style>
-        @page { size: {$paper}; margin: 2cm; }
-        body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; line-height: 1.5; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-        td, th { border: 1px solid #333; padding: 4px 6px; vertical-align: top; }
-        img { max-width: 100%; height: auto; }
-        .page-break { page-break-after: always; }
-    </style>
+<meta charset="utf-8">
+<title>KAK — {$kak->judul}</title>
+<style>
+    @page { size: {$paperSizeCss}; margin: 2cm; }
+    html, body { font-family: 'Times New Roman', 'DejaVu Serif', serif; font-size: 12pt; color: #000; line-height: 1.5; }
+    body { text-align: justify; }
+    p { margin: 0 0 8pt; }
+    table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+    table, th, td { border: 1px solid #000; }
+    th, td { padding: 4pt 6pt; vertical-align: top; }
+    img { max-width: 100%; height: auto; }
+    h1, h2, h3, h4, h5, h6 { margin: 12pt 0 6pt; }
+    .page-break { page-break-before: always; }
+    {$phpwordCss}
+</style>
 </head>
 <body>
-{$html}
+{$body}
 </body>
 </html>
 HTML;
@@ -195,6 +216,34 @@ HTML;
             'f4', 'folio' => [0, 0, 609.45, 935.43],
             default => 'a4',
         };
+    }
+
+    /**
+     * Pertahankan hanya aturan CSS berbasis class dari output PhpWord.
+     * Aturan generik (body, html, *, table, td, hr, @page, page-break)
+     * dibuang agar tidak menimpa styling shell PDF yang sudah ditentukan.
+     */
+    protected function sanitizePhpWordCss(string $css): string
+    {
+        $out = '';
+        if (preg_match_all('/([^{}]+)\{([^{}]*)\}/s', $css, $m, PREG_SET_ORDER)) {
+            foreach ($m as $rule) {
+                $selector = trim($rule[1]);
+                $decl = trim($rule[2]);
+                if ($decl === '') {
+                    continue;
+                }
+                if (preg_match('/^\s*(body|html|\*|hr|table|td|th)\s*$/i', $selector)) {
+                    continue;
+                }
+                if (preg_match('/@page|page-break|>\s*\*|>\s*div|div\s*>|\*\s*:/i', $selector)) {
+                    continue;
+                }
+                $out .= $selector.' {'.$decl.'}'."\n";
+            }
+        }
+
+        return $out;
     }
 
     /**
