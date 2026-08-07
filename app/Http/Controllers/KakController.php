@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -134,6 +135,102 @@ class KakController extends Controller
             'f4', 'folio' => [0, 0, 609.45, 935.43],
             default => 'a4',
         };
+    }
+
+    /**
+     * Halaman editor DOCX WYSIWYG di browser.
+     */
+    public function editDocx(Kak $kak): View
+    {
+        $kak->load(['anggarans']);
+
+        return view('kak.edit-docx', compact('kak'));
+    }
+
+    /**
+     * Generate & simpan DOCX asli (original) ke penyimpanan bila belum ada.
+     * Original tetap utuh; versi edit disimpan terpisah.
+     *
+     * @return array{original_exists: bool, edited_exists: bool}
+     */
+    public function generateDocx(Kak $kak): array
+    {
+        $kak->load(['anggarans']);
+
+        $disk = Storage::disk('local');
+        $dir = 'kak/'.$kak->id;
+        $original = $dir.'/original.docx';
+        $edited = $dir.'/edited.docx';
+
+        if (! $disk->exists($original)) {
+            $path = app(\App\Services\KakWordExporter::class)->generate($kak, 'a4');
+            $disk->put($original, file_get_contents($path));
+            @unlink($path);
+
+            $kak->update(['docx_original_path' => $original]);
+        }
+
+        if ($disk->exists($edited) && $kak->docx_edited_path !== $edited) {
+            $kak->update(['docx_edited_path' => $edited]);
+        }
+
+        return [
+            'original_exists' => $disk->exists($original),
+            'edited_exists' => $disk->exists($edited),
+        ];
+    }
+
+    /**
+     * Kirim file DOCX asli untuk dibuka editor (inline, bukan download).
+     */
+    public function getOriginalDocx(Kak $kak): Response
+    {
+        return $this->streamDocx($kak->docx_original_path, 'KAK-'.str($kak->judul)->slug().'-original.docx');
+    }
+
+    /**
+     * Kirim file DOCX hasil edit.
+     */
+    public function getEditedDocx(Kak $kak): Response
+    {
+        return $this->streamDocx($kak->docx_edited_path, 'KAK-'.str($kak->judul)->slug().'-edited.docx');
+    }
+
+    /**
+     * Simpan versi edit DOCX (overwrite edited.docx).
+     */
+    public function saveEditedDocx(Request $request, Kak $kak): Response
+    {
+        $bytes = $request->getContent();
+
+        if ($bytes === '' || strlen($bytes) < 10) {
+            return response()->json(['error' => 'Berkas kosong atau tidak valid.'], 422);
+        }
+
+        $disk = Storage::disk('local');
+        $edited = 'kak/'.$kak->id.'/edited.docx';
+
+        $disk->put($edited, $bytes);
+        $kak->update(['docx_edited_path' => $edited]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Alirkan file DOCX sebagai inline response bila ada.
+     */
+    protected function streamDocx(?string $path, string $namaFile): Response
+    {
+        $disk = Storage::disk('local');
+
+        if (! $path || ! $disk->exists($path)) {
+            return response()->json(['error' => 'Dokumen belum tersedia.'], 404);
+        }
+
+        return response($disk->get($path), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'inline; filename="'.$namaFile.'"',
+        ]);
     }
 
     /**

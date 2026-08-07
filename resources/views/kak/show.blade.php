@@ -41,6 +41,7 @@
                 </label>
                 <a id="btn-word" href="{{ route('kak.word', $kak) }}?ukuran=a4" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>
                 <a id="btn-pdf" href="{{ route('kak.pdf', $kak) }}?ukuran=a4" target="_blank" class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
+                <a href="{{ route('kak.edit-docx', $kak) }}" class="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">Edit DOCX</a>
             </div>
 
             {{-- Dokumen (mirip hasil cetak) --}}

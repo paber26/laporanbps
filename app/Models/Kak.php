@@ -34,6 +34,8 @@ class Kak extends Model
         'ttd_kanan_jabatan',
         'ttd_kanan_nama',
         'ttd_kanan_nip',
+        'docx_original_path',
+        'docx_edited_path',
     ];
 
     protected $casts = [
