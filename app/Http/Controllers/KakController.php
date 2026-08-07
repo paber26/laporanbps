@@ -124,11 +124,11 @@ class KakController extends Controller
     }
 
     /**
-     * Cetak KAK dari versi edit DOCX ke PDF.
+     * Cetak PDF dari DOCX hasil upload (dari Word).
      *
-     * DOCX diurai langsung dari XML (bukan penulis HTML PhpWord yang lossy)
-     * sehingga penomoran list, tabel, dan gambar dipertahankan. HTML output
-     * dibalut CSS yang sama dengan template PDF KAK agar tampilannya seragam.
+     * DOCX diurai langsung dari XML sehingga penomoran list, tabel, dan
+     * gambar dipertahankan. HTML output dibalut CSS yang sama dengan
+     * template PDF KAK agar tampilannya seragam.
      */
     public function exportEditedPdf(Request $request, Kak $kak): Response
     {
@@ -136,17 +136,13 @@ class KakController extends Controller
 
         $disk = Storage::disk('local');
         $editedPath = $kak->docx_edited_path ?? "kak/{$kak->id}/edited.docx";
-        $originalPath = $kak->docx_original_path ?? "kak/{$kak->id}/original.docx";
 
-        // Pilih file yang ada: edited > original
-        $docxPath = $disk->exists($editedPath) ? $editedPath : $originalPath;
-
-        if (! $disk->exists($docxPath)) {
-            abort(404, 'Dokumen tidak ditemukan.');
+        if (! $disk->exists($editedPath)) {
+            abort(404, 'Dokumen belum diunggah.');
         }
 
         $converter = new \App\Services\DocxToPdfConverter;
-        $body = $converter->toHtml($disk->path($docxPath));
+        $body = $converter->toHtml($disk->path($editedPath));
 
         // Ukuran kertas: query ?ukuran=a4|f4 menimpa ukuran dari dokumen.
         $paper = $ukuran === 'a4' || $ukuran === 'f4' || $ukuran === 'folio'
@@ -196,102 +192,6 @@ HTML;
     }
 
     /**
-     * Peta ukuran kertas untuk dompdf.
-     *
-     * @return string|array<int, float>
-     */
-    protected function paperSize(string $ukuran): string|array
-    {
-        return match ($ukuran) {
-            // F4 / Folio = 215mm x 330mm (dalam poin, 1mm = 2.83465pt).
-            'f4', 'folio' => [0, 0, 609.45, 935.43],
-            default => 'a4',
-        };
-    }
-
-    /**
-     * Halaman editor DOCX WYSIWYG di browser.
-     */
-    public function editDocx(Kak $kak): View
-    {
-        // Pastikan DOCX asli sudah tersedia di penyimpanan sebelum editor dibuka.
-        $this->generateDocx($kak);
-
-        $kak->load(['anggarans']);
-
-        return view('kak.edit-docx', compact('kak'));
-    }
-
-    /**
-     * Generate & simpan DOCX asli (original) ke penyimpanan bila belum ada.
-     * Original tetap utuh; versi edit disimpan terpisah.
-     *
-     * @return array{original_exists: bool, edited_exists: bool}
-     */
-    public function generateDocx(Kak $kak): array
-    {
-        $kak->load(['anggarans']);
-
-        $disk = Storage::disk('local');
-        $dir = 'kak/'.$kak->id;
-        $original = $dir.'/original.docx';
-        $edited = $dir.'/edited.docx';
-
-        if (! $disk->exists($original)) {
-            $path = app(\App\Services\KakWordExporter::class)->generate($kak, 'a4');
-            $disk->put($original, file_get_contents($path));
-            @unlink($path);
-
-            $kak->update(['docx_original_path' => $original]);
-        }
-
-        if ($disk->exists($edited) && $kak->docx_edited_path !== $edited) {
-            $kak->update(['docx_edited_path' => $edited]);
-        }
-
-        return [
-            'original_exists' => $disk->exists($original),
-            'edited_exists' => $disk->exists($edited),
-        ];
-    }
-
-    /**
-     * Kirim file DOCX asli untuk dibuka editor (inline, bukan download).
-     */
-    public function getOriginalDocx(Kak $kak): Response
-    {
-        return $this->streamDocx($kak->docx_original_path, 'KAK-'.str($kak->judul)->slug().'-original.docx');
-    }
-
-    /**
-     * Kirim file DOCX hasil edit.
-     */
-    public function getEditedDocx(Kak $kak): Response
-    {
-        return $this->streamDocx($kak->docx_edited_path, 'KAK-'.str($kak->judul)->slug().'-edited.docx');
-    }
-
-    /**
-     * Simpan versi edit DOCX (overwrite edited.docx).
-     */
-    public function saveEditedDocx(Request $request, Kak $kak): Response
-    {
-        $bytes = $request->getContent();
-
-        if ($bytes === '' || strlen($bytes) < 10) {
-            return response()->json(['error' => 'Berkas kosong atau tidak valid.'], 422);
-        }
-
-        $disk = Storage::disk('local');
-        $edited = 'kak/'.$kak->id.'/edited.docx';
-
-        $disk->put($edited, $bytes);
-        $kak->update(['docx_edited_path' => $edited]);
-
-        return response()->json(['ok' => true]);
-    }
-
-    /**
      * Unggah DOCX hasil edit dari Word (multipart) lalu simpan sebagai
      * edited.docx untuk dicetak via exportEditedPdf.
      */
@@ -311,21 +211,17 @@ HTML;
     }
 
     /**
-     * Alirkan file DOCX sebagai inline response bila ada.
+     * Peta ukuran kertas untuk dompdf.
+     *
+     * @return string|array<int, float>
      */
-    protected function streamDocx(?string $path, string $namaFile): Response    {
-        $disk = Storage::disk('local');
-
-        if (! $path || ! $disk->exists($path)) {
-            return response()->json(['error' => 'Dokumen belum tersedia.'], 404);
-        }
-
-        return response($disk->get($path), 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => 'inline; filename="'.$namaFile.'"',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-            'Pragma' => 'no-cache',
-        ]);
+    protected function paperSize(string $ukuran): string|array
+    {
+        return match ($ukuran) {
+            // F4 / Folio = 215mm x 330mm (dalam poin, 1mm = 2.83465pt).
+            'f4', 'folio' => [0, 0, 609.45, 935.43],
+            default => 'a4',
+        };
     }
 
     /**

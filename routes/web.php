@@ -39,12 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Kerangka Acuan Kerja (KAK) + cetak.
     Route::get('kak/{kak}/word', [KakController::class, 'exportWord'])->name('kak.word');
     Route::get('kak/{kak}/pdf', [KakController::class, 'exportPdf'])->name('kak.pdf');
-    Route::get('kak/{kak}/edit-docx/pdf', [KakController::class, 'exportEditedPdf'])->name('kak.edit-docx.pdf');
-    Route::get('kak/{kak}/edit-docx', [KakController::class, 'editDocx'])->name('kak.edit-docx');
-    Route::post('kak/{kak}/docx/generate', [KakController::class, 'generateDocx'])->name('kak.docx.generate');
-    Route::get('kak/{kak}/docx/original', [KakController::class, 'getOriginalDocx'])->name('kak.docx.original');
-    Route::get('kak/{kak}/docx/edited', [KakController::class, 'getEditedDocx'])->name('kak.docx.edited');
-    Route::post('kak/{kak}/docx/save', [KakController::class, 'saveEditedDocx'])->name('kak.docx.save');
+    Route::get('kak/{kak}/docx/pdf', [KakController::class, 'exportEditedPdf'])->name('kak.docx.pdf');
     Route::post('kak/{kak}/docx/upload', [KakController::class, 'uploadDocx'])->name('kak.docx.upload');
     Route::resource('kak', KakController::class);
 });
