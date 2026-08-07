@@ -101,19 +101,33 @@
         min-height: 0 !important;
         max-height: none !important;
         overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
+    /* Wrapper surface: tinggi mengikuti isi, bukan inline style height:100%. */
     .ep-root .docx-paginated-surface,
     .ep-root .docx-pages {
         margin: 0 !important;
+        padding: 0 !important;
         gap: 0 !important;
         width: 100% !important;
+        height: auto !important;
+        position: relative !important;
+        overflow: visible !important;
     }
 
-    /* Halaman dokumen: tanpa bayangan, satu halaman per lembar. */
+    /* Halaman dokumen: di layar ia absolute (inline left/top), tapi saat
+       print harus mengalir (relative + reset offset) agar `break-after`
+       berfungsi dan tiap halaman jadi satu lembar. `width`/`height` inline
+       sudah sesuai ukuran kertas sehingga tidak perlu diubah. */
     .ep-root .docx-page {
+        position: relative !important;
+        left: 0 !important;
+        top: 0 !important;
         box-shadow: none !important;
         margin: 0 auto !important;
+        float: none !important;
         break-after: page;
         page-break-after: always;
     }
@@ -122,4 +136,7 @@
         break-after: auto;
         page-break-after: auto;
     }
+
+    /* Isi halaman (docx-page-content) adalah absolute di dalam halaman —
+       dibiarkan agar tinta teks tetap pada posisi layout-nya. */
 }
