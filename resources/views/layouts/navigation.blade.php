@@ -24,6 +24,9 @@
                     <x-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.*')">
                         {{ __('Pegawai') }}
                     </x-nav-link>
+                    <x-nav-link href="https://drive.google.com/drive/u/0/folders/197tXagiU0qyapO-ev3XAPpuSomVI6MmI" target="_blank">
+                        {{ __('Drive') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -109,6 +112,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.*')">
                 {{ __('Pegawai') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="https://drive.google.com/drive/u/0/folders/197tXagiU0qyapO-ev3XAPpuSomVI6MmI" target="_blank">
+                {{ __('Drive') }}
             </x-responsive-nav-link>
         </div>
 
