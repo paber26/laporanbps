@@ -3,38 +3,57 @@ import { createRoot } from 'react-dom/client';
 import { DocxEditor } from '@docx-editor.dev/react';
 import '@docx-editor.dev/core/styles/editor.css';
 
-function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, csrfToken }) {
+function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, csrfToken }) {
     const editorRef = useRef(null);
     const [buffer, setBuffer] = useState(null);
+    const [hasEdited, setHasEdited] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
 
+    // Muat dokumen: selalu mulai dari original (pasti tersedia, di-generate server),
+    // lalu coba ambil versi edit bila ada. Jika versi edit rusak, tetap pakai original.
     useEffect(() => {
         let cancelled = false;
 
-        // Lebih dulu pakai versi edit bila sudah ada; kalau tidak, original.
-        fetch(editedUrl, { headers: { Accept: 'application/octet-stream' } })
-            .then((r) => {
-                if (r.ok) return r.arrayBuffer();
-                return fetch(originalUrl).then((r2) => {
-                    if (!r2.ok) throw new Error('Gagal memuat dokumen');
-                    return r2.arrayBuffer();
-                });
-            })
-            .then((buf) => {
+        async function load() {
+            try {
+                const origRes = await fetch(originalUrl, { headers: { Accept: 'application/octet-stream' } });
+                if (!origRes.ok) {
+                    throw new Error('Gagal memuat dokumen asli (HTTP ' + origRes.status + ')');
+                }
+
+                let bytes = await origRes.arrayBuffer();
+                let editedFound = false;
+
+                try {
+                    const editRes = await fetch(editedUrl, { headers: { Accept: 'application/octet-stream' } });
+                    if (editRes.ok) {
+                        const editedBytes = await editRes.arrayBuffer();
+                        if (editedBytes.byteLength > 0) {
+                            bytes = editedBytes;
+                            editedFound = true;
+                        }
+                    }
+                } catch (e) {
+                    // Versi edit gagal dibaca → lanjut dengan original.
+                }
+
                 if (!cancelled) {
-                    setBuffer(buf);
+                    setHasEdited(editedFound);
+                    setBuffer(bytes);
                     setLoading(false);
                 }
-            })
-            .catch((e) => {
+            } catch (e) {
                 if (!cancelled) {
                     setError(e.message || 'Gagal memuat dokumen');
                     setLoading(false);
                 }
-            });
+            }
+        }
+
+        load();
 
         return () => {
             cancelled = true;
@@ -63,12 +82,19 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, csrfToken }) {
                 throw new Error(data.error || 'Gagal menyimpan dokumen');
             }
 
+            setHasEdited(true);
             setMessage('Dokumen berhasil disimpan.');
         } catch (e) {
             setMessage({ type: 'error', text: e.message || 'Gagal menyimpan dokumen' });
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleEditorError = (err) => {
+        console.error('DOCX editor error:', err);
+        setError('Dokumen gagal diproses editor. Coba muat ulang halaman.');
+        setLoading(false);
     };
 
     return (
@@ -83,7 +109,25 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, csrfToken }) {
                 >
                     {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>
-                <span className="text-xs text-gray-500 dark:text-gray-400">Klik Simpan Perubahan untuk menyimpan sebagai file terpisah. File asli tetap utuh.</span>
+                <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700"
+                >
+                    Cetak PDF
+                </a>
+                <button
+                    type="button"
+                    onClick={() => window.print()}
+                    disabled={loading}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                    Print
+                </button>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {hasEdited ? 'Menampilkan versi edit. ' : ''}Klik Simpan Perubahan untuk menyimpan sebagai file terpisah. File asli tetap utuh.
+                </span>
                 {message && (
                     <span className={`text-sm ${message.type === 'error' ? 'text-rose-600 dark:text-rose-400' : 'text-green-600 dark:text-green-400'}`}>
                         {message.text}
@@ -102,12 +146,13 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, csrfToken }) {
                         {error}
                     </div>
                 )}
-                {buffer && !loading && (
+                {buffer && !loading && !error && (
                     <DocxEditor
                         ref={editorRef}
                         document={buffer}
                         mode="edit"
                         title={`KAK #${kakId}`}
+                        onError={handleEditorError}
                     />
                 )}
             </div>
@@ -125,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             originalUrl={rootEl.dataset.originalUrl}
             saveUrl={rootEl.dataset.saveUrl}
             editedUrl={rootEl.dataset.editedUrl}
+            pdfUrl={rootEl.dataset.pdfUrl}
             csrfToken={rootEl.dataset.csrfToken}
         />
     );
