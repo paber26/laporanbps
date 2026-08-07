@@ -91,11 +91,13 @@ class KakController extends Controller
     /**
      * Cetak KAK sebagai dokumen Microsoft Word (.docx).
      */
-    public function exportWord(Kak $kak): BinaryFileResponse
+    public function exportWord(Request $request, Kak $kak): BinaryFileResponse
     {
         $kak->load(['anggarans']);
 
-        $path = app(\App\Services\KakWordExporter::class)->generate($kak);
+        $ukuran = strtolower($request->query('ukuran', 'a4'));
+
+        $path = app(\App\Services\KakWordExporter::class)->generate($kak, $ukuran);
 
         $namaFile = 'KAK-'.str($kak->judul)->slug().'.docx';
 
@@ -103,18 +105,35 @@ class KakController extends Controller
     }
 
     /**
-     * Cetak KAK sebagai PDF.
+     * Cetak KAK sebagai PDF dengan pilihan ukuran kertas (A4 / F4).
      */
-    public function exportPdf(Kak $kak): Response
+    public function exportPdf(Request $request, Kak $kak): Response
     {
         $kak->load(['anggarans']);
 
+        $ukuran = strtolower($request->query('ukuran', 'a4'));
+        $paper = $this->paperSize($ukuran);
+
         $pdf = Pdf::loadView('kak.pdf-template', compact('kak'))
-            ->setPaper('a4', 'portrait');
+            ->setPaper($paper, 'portrait');
 
         $namaFile = 'KAK-'.str($kak->judul)->slug().'.pdf';
 
         return $pdf->stream($namaFile);
+    }
+
+    /**
+     * Peta ukuran kertas untuk dompdf.
+     *
+     * @return string|array<int, float>
+     */
+    protected function paperSize(string $ukuran): string|array
+    {
+        return match ($ukuran) {
+            // F4 / Folio = 215mm x 330mm (dalam poin, 1mm = 2.83465pt).
+            'f4', 'folio' => [0, 0, 609.45, 935.43],
+            default => 'a4',
+        };
     }
 
     /**

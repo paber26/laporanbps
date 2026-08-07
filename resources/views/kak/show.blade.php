@@ -33,8 +33,14 @@
             {{-- Panel cetak --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 flex flex-wrap items-center gap-3">
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cetak Dokumen:</span>
-                <a href="{{ route('kak.word', $kak) }}" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>
-                <a href="{{ route('kak.pdf', $kak) }}" target="_blank" class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
+                <label class="text-sm text-gray-600 dark:text-gray-400">Ukuran Kertas
+                    <select id="ukuran-kertas" class="ml-1 border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md text-sm">
+                        <option value="a4">A4</option>
+                        <option value="f4">F4 / Folio</option>
+                    </select>
+                </label>
+                <a id="btn-word" href="{{ route('kak.word', $kak) }}?ukuran=a4" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>
+                <a id="btn-pdf" href="{{ route('kak.pdf', $kak) }}?ukuran=a4" target="_blank" class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
             </div>
 
             {{-- Dokumen (mirip hasil cetak) --}}
@@ -121,4 +127,18 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            const sel = document.getElementById('ukuran-kertas');
+            const btnWord = document.getElementById('btn-word');
+            const btnPdf = document.getElementById('btn-pdf');
+            const baseWord = "{{ route('kak.word', $kak) }}";
+            const basePdf = "{{ route('kak.pdf', $kak) }}";
+            sel.addEventListener('change', () => {
+                btnWord.href = baseWord + '?ukuran=' + sel.value;
+                btnPdf.href = basePdf + '?ukuran=' + sel.value;
+            });
+        })();
+    </script>
 </x-app-layout>

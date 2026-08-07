@@ -17,17 +17,23 @@ use PhpOffice\PhpWord\Shared\Html;
  */
 class KakWordExporter
 {
-    public function generate(Kak $kak): string
+    public function generate(Kak $kak, string $ukuran = 'a4'): string
     {
         $phpWord = new PhpWord;
         $phpWord->setDefaultFontName('Times New Roman');
         $phpWord->setDefaultFontSize(12);
+
+        // Ukuran kertas: A4 (21 x 29,7 cm) atau F4/Folio (21,5 x 33 cm).
+        $lebar = $ukuran === 'f4' || $ukuran === 'folio' ? 21.5 : 21.0;
+        $tinggi = $ukuran === 'f4' || $ukuran === 'folio' ? 33.0 : 29.7;
 
         $section = $phpWord->addSection([
             'marginTop' => Converter::cmToTwip(2),
             'marginBottom' => Converter::cmToTwip(2),
             'marginLeft' => Converter::cmToTwip(3),
             'marginRight' => Converter::cmToTwip(2),
+            'pageSizeW' => Converter::cmToTwip($lebar),
+            'pageSizeH' => Converter::cmToTwip($tinggi),
         ]);
 
         $this->kopInstansi($section, $kak);
