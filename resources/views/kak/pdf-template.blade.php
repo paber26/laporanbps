@@ -7,6 +7,8 @@
         * { font-family: 'Times New Roman', serif; }
         body { font-size: 12pt; color: #000; line-height: 1.5; }
         .kop { text-align: center; font-weight: bold; font-size: 14pt; text-transform: uppercase; }
+        .logo { text-align: center; margin-bottom: 4px; }
+        .logo img { width: 90px; height: 70px; }
         .judul-wrap { text-align: center; margin-top: 24px; }
         .judul-kak { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
         .bagian-judul { font-weight: bold; text-transform: uppercase; margin: 18px 0 8px; }
@@ -22,8 +24,14 @@
         .ttd-nama { font-weight: bold; text-decoration: underline; }
         p { margin: 0 0 8px; }
     </style>
+    @php
+        $logoUri = \App\Support\PdfImage::dataUri(public_path('logo-small.png'), 300);
+    @endphp
 </head>
 <body>
+    @if ($logoUri)
+        <div class="logo"><img src="{{ $logoUri }}" alt="Logo BPS"></div>
+    @endif
     <div class="kop">{{ $kak->unit_kerja ?? 'Badan Pusat Statistik' }}</div>
 
     <div class="judul-wrap">

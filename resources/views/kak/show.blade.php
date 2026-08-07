@@ -39,7 +39,8 @@
 
             {{-- Dokumen (mirip hasil cetak) --}}
             <div class="bg-white shadow-sm rounded-lg p-10 leading-relaxed text-[15px] text-gray-900 max-w-[21cm] mx-auto" style="font-family: 'Times New Roman', serif;">
-                <h1 class="text-center font-bold text-lg uppercase">{{ $kak->unit_kerja ?? 'Badan Pusat Statistik' }}</h1>
+                <div class="text-center"><img src="{{ asset('logo-small.png') }}" alt="Logo BPS" class="w-[90px] h-[70px] mx-auto"></div>
+                <h1 class="text-center font-bold text-lg uppercase mt-2">{{ $kak->unit_kerja ?? 'Badan Pusat Statistik' }}</h1>
 
                 <div class="text-center mt-6">
                     <div class="font-bold text-base">Kerangka Acuan Kerja (KAK)</div>

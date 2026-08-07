@@ -95,13 +95,23 @@ class KakWordExporter
     }
 
     /**
-     * Kop instansi (nama lembaga) di tengah halaman.
+     * Kop instansi (logo + nama lembaga) di tengah halaman.
      */
     protected function kopInstansi(\PhpOffice\PhpWord\Element\Section $section, Kak $kak): void
     {
         $nama = trim($kak->unit_kerja ?? '');
         if ($nama === '') {
             $nama = 'BADAN PUSAT STATISTIK';
+        }
+
+        $logo = public_path('logo-small.png');
+        if (is_file($logo)) {
+            $section->addImage($logo, [
+                'width' => 90,
+                'height' => 70,
+                'alignment' => 'center',
+                'spaceAfter' => 60,
+            ]);
         }
 
         $section->addText(
