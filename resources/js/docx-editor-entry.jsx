@@ -135,8 +135,7 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, editedP
                 )}
             </div>
 
-            <div className="flex-1 min-h-0 bg-gray-200 dark:bg-gray-900 rounded-b-lg overflow-y-auto">
-                <div className="docx-editor-canvas h-full">
+            <div className="flex-1 min-h-0 bg-gray-200 dark:bg-gray-900 rounded-b-lg overflow-hidden">
                 {loading && (
                     <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                         Memuat dokumen...
@@ -156,7 +155,6 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, editedP
                         onError={handleEditorError}
                     />
                 )}
-                </div>
             </div>
         </div>
     );
