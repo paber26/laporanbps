@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use PhpOffice\PhpWord\IOFactory;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -126,12 +125,14 @@ class KakController extends Controller
 
     /**
      * Cetak KAK dari versi edit DOCX ke PDF.
-     * Menggunakan PhpWord (DOCX → HTML) + Dompdf (HTML → PDF).
+     *
+     * DOCX diurai langsung dari XML (bukan penulis HTML PhpWord yang lossy)
+     * sehingga penomoran list, tabel, dan gambar dipertahankan. HTML output
+     * dibalut CSS yang sama dengan template PDF KAK agar tampilannya seragam.
      */
     public function exportEditedPdf(Request $request, Kak $kak): Response
     {
         $ukuran = strtolower($request->query('ukuran', 'a4'));
-        $paper = $this->paperSize($ukuran);
 
         $disk = Storage::disk('local');
         $editedPath = $kak->docx_edited_path ?? "kak/{$kak->id}/edited.docx";
@@ -144,29 +145,14 @@ class KakController extends Controller
             abort(404, 'Dokumen tidak ditemukan.');
         }
 
-        // DOCX → HTML via PhpWord. PhpWord menghasilkan dokumen HTML *lengkap*
-        // (berisi <html>, <head> dengan <style>, dan <body>), jadi jangan
-        // dibungkus HTML utuh lagi. Ambil isi <body> saja agar DOM tetap valid
-        // untuk Dompdf, lalu balut dengan shell HTML yang rapi.
-        $phpWord = IOFactory::load($disk->path($docxPath), 'Word2007');
-        $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
-        $full = $htmlWriter->getContent();
+        $converter = new \App\Services\DocxToPdfConverter;
+        $body = $converter->toHtml($disk->path($docxPath));
 
-        // Ambil hanya bagian dalam <body>...</body>.
-        $body = '';
-        if (preg_match('/<body[^>]*>(.*)<\/body>/is', $full, $m)) {
-            $body = trim($m[1]);
-        }
+        // Ukuran kertas: query ?ukuran=a4|f4 menimpa ukuran dari dokumen.
+        $paper = $ukuran === 'a4' || $ukuran === 'f4' || $ukuran === 'folio'
+            ? $this->paperSize($ukuran)
+            : $converter->paperSize();
 
-        // Ambil <style> dari PhpWord (berisi class seperti .Normal, class tabel,
-        // dll.) agar elemen yang memakai class tetap rapi. Buang aturan generik
-        // (body, *, table, hr, @page) yang bakal menimpa styling shell di atas.
-        $phpwordCss = '';
-        if (preg_match('/<style>(.*)<\/style>/is', $full, $m)) {
-            $phpwordCss = $this->sanitizePhpWordCss($m[1]);
-        }
-
-        // Ukuran kertas untuk CSS @page (dari paperSize; array diubah ke inci).
         $paperSizeCss = is_array($paper) ? sprintf('%fpt %fpt', $paper[2], $paper[3]) : $paper;
 
         $fullHtml = <<<HTML
@@ -176,17 +162,22 @@ class KakController extends Controller
 <meta charset="utf-8">
 <title>KAK — {$kak->judul}</title>
 <style>
-    @page { size: {$paperSizeCss}; margin: 2cm; }
-    html, body { font-family: 'Times New Roman', 'DejaVu Serif', serif; font-size: 12pt; color: #000; line-height: 1.5; }
-    body { text-align: justify; }
-    p { margin: 0 0 8pt; }
-    table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
-    table, th, td { border: 1px solid #000; }
-    th, td { padding: 4pt 6pt; vertical-align: top; }
+    @page { size: {$paperSizeCss}; }
+    * { font-family: 'Times New Roman', 'DejaVu Serif', serif; }
+    body { font-size: 12pt; color: #000; line-height: 1.5; }
+    p { margin: 0 0 8px; }
+    p.spacer { margin: 0; line-height: 1.2; }
+    p.logo { text-align: center; margin-bottom: 4px; }
+    p.logo img { width: 90px; height: 70px; }
+    p.bagian-judul { font-weight: bold; text-transform: uppercase; margin: 18px 0 8px; }
+    ol { margin: 0 0 8px; padding-left: 24px; text-align: justify; }
+    ol li { margin-bottom: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+    table.data-table, .data-table td { border: 1px solid #000; }
+    .data-table td { padding: 6px 8px; vertical-align: top; font-size: 11pt; }
+    table.ttd-table { border: none; margin-top: 40px; }
+    .ttd-table td { border: none; text-align: center; vertical-align: top; width: 50%; padding: 0 12px; }
     img { max-width: 100%; height: auto; }
-    h1, h2, h3, h4, h5, h6 { margin: 12pt 0 6pt; }
-    .page-break { page-break-before: always; }
-    {$phpwordCss}
 </style>
 </head>
 <body>
@@ -216,34 +207,6 @@ HTML;
             'f4', 'folio' => [0, 0, 609.45, 935.43],
             default => 'a4',
         };
-    }
-
-    /**
-     * Pertahankan hanya aturan CSS berbasis class dari output PhpWord.
-     * Aturan generik (body, html, *, table, td, hr, @page, page-break)
-     * dibuang agar tidak menimpa styling shell PDF yang sudah ditentukan.
-     */
-    protected function sanitizePhpWordCss(string $css): string
-    {
-        $out = '';
-        if (preg_match_all('/([^{}]+)\{([^{}]*)\}/s', $css, $m, PREG_SET_ORDER)) {
-            foreach ($m as $rule) {
-                $selector = trim($rule[1]);
-                $decl = trim($rule[2]);
-                if ($decl === '') {
-                    continue;
-                }
-                if (preg_match('/^\s*(body|html|\*|hr|table|td|th)\s*$/i', $selector)) {
-                    continue;
-                }
-                if (preg_match('/@page|page-break|>\s*\*|>\s*div|div\s*>|\*\s*:/i', $selector)) {
-                    continue;
-                }
-                $out .= $selector.' {'.$decl.'}'."\n";
-            }
-        }
-
-        return $out;
     }
 
     /**
