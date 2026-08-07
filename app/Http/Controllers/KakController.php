@@ -142,6 +142,9 @@ class KakController extends Controller
      */
     public function editDocx(Kak $kak): View
     {
+        // Pastikan DOCX asli sudah tersedia di penyimpanan sebelum editor dibuka.
+        $this->generateDocx($kak);
+
         $kak->load(['anggarans']);
 
         return view('kak.edit-docx', compact('kak'));
