@@ -2,9 +2,12 @@
     /** @var \App\Models\Kak|null $kak */
     $isEdit = isset($kak) && $kak?->exists;
 
-    $val = fn ($field, $default = '') => old($field, $isEdit ? ($kak->{$field} instanceof \Carbon\Carbon ? $kak->{$field}->format('Y-m-d') : $kak->{$field}) : $default);
+    // Nilai awal pada halaman "Buat KAK": memakai contoh dari controller.
+    $defaults = $defaults ?? [];
 
-    // Baris anggaran awal: prioritaskan old(), lalu data model, lalu 1 baris kosong.
+    $val = fn ($field, $default = '') => old($field, $isEdit ? ($kak->{$field} instanceof \Carbon\Carbon ? $kak->{$field}->format('Y-m-d') : $kak->{$field}) : ($defaults[$field] ?? $default));
+
+    // Baris anggaran awal: prioritaskan old(), lalu data model, lalu contoh.
     $anggaranRows = old('anggarans');
     if ($anggaranRows === null) {
         if ($isEdit && $kak->anggarans->count()) {
@@ -17,7 +20,7 @@
                 'jumlah_biaya' => $a->jumlah_biaya,
             ])->toArray();
         } else {
-            $anggaranRows = [['kode_mak' => '', 'deskripsi' => '', 'volume' => '', 'satuan' => '', 'harga_satuan' => '', 'jumlah_biaya' => '']];
+            $anggaranRows = $defaultAnggarans ?? [['kode_mak' => '', 'deskripsi' => '', 'volume' => '', 'satuan' => '', 'harga_satuan' => '', 'jumlah_biaya' => '']];
         }
     }
 
