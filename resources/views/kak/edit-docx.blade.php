@@ -16,6 +16,7 @@
                  data-save-url="{{ route('kak.docx.save', $kak) }}"
                  data-edited-url="{{ route('kak.docx.edited', $kak) }}"
                  data-pdf-url="{{ route('kak.pdf', $kak) }}"
+                 data-edited-pdf-url="{{ route('kak.edit-docx.pdf', $kak) }}"
                  data-csrf-token="{{ csrf_token() }}"
                  class="w-full"></div>
         </div>

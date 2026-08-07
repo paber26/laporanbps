@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpWord\IOFactory;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -119,6 +120,65 @@ class KakController extends Controller
             ->setPaper($paper, 'portrait');
 
         $namaFile = 'KAK-'.str($kak->judul)->slug().'.pdf';
+
+        return $pdf->stream($namaFile);
+    }
+
+    /**
+     * Cetak KAK dari versi edit DOCX ke PDF.
+     * Menggunakan PhpWord (DOCX → HTML) + Dompdf (HTML → PDF).
+     */
+    public function exportEditedPdf(Request $request, Kak $kak): Response
+    {
+        $ukuran = strtolower($request->query('ukuran', 'a4'));
+        $paper = $this->paperSize($ukuran);
+
+        $disk = Storage::disk('local');
+        $editedPath = $kak->docx_edited_path ?? "kak/{$kak->id}/edited.docx";
+        $originalPath = $kak->docx_original_path ?? "kak/{$kak->id}/original.docx";
+
+        // Pilih file yang ada: edited > original
+        $docxPath = $disk->exists($editedPath) ? $editedPath : $originalPath;
+
+        if (! $disk->exists($docxPath)) {
+            abort(404, 'Dokumen tidak ditemukan.');
+        }
+
+        // DOCX → HTML via PhpWord
+        $tmpDocx = $disk->path($docxPath);
+        $phpWord = IOFactory::load($tmpDocx, 'Word2007');
+        $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
+        $html = '';
+        ob_start();
+        $htmlWriter->save('php://output');
+        $html = ob_get_clean();
+
+        // Wrap HTML with basic styling for A4 paper
+        $fullHtml = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { size: {$paper}; margin: 2cm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; line-height: 1.5; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+        td, th { border: 1px solid #333; padding: 4px 6px; vertical-align: top; }
+        img { max-width: 100%; height: auto; }
+        .page-break { page-break-after: always; }
+    </style>
+</head>
+<body>
+{$html}
+</body>
+</html>
+HTML;
+
+        $pdf = Pdf::loadHTML($fullHtml)
+            ->setPaper($paper, 'portrait')
+            ->setWarnings(false);
+
+        $namaFile = 'KAK-'.str($kak->judul)->slug().'-edited.pdf';
 
         return $pdf->stream($namaFile);
     }

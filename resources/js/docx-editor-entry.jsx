@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { DocxEditor } from '@docx-editor.dev/react';
 import '@docx-editor.dev/core/styles/editor.css';
 
-function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, csrfToken }) {
+function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, editedPdfUrl, csrfToken }) {
     const editorRef = useRef(null);
     const [buffer, setBuffer] = useState(null);
     const [hasEdited, setHasEdited] = useState(false);
@@ -119,7 +119,7 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, csrfTok
                 </a>
                 <button
                     type="button"
-                    onClick={() => window.open(pdfUrl, '_blank')}
+                    onClick={() => window.open(editedPdfUrl, '_blank')}
                     disabled={loading}
                     className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveUrl={rootEl.dataset.saveUrl}
             editedUrl={rootEl.dataset.editedUrl}
             pdfUrl={rootEl.dataset.pdfUrl}
+            editedPdfUrl={rootEl.dataset.editedPdfUrl}
             csrfToken={rootEl.dataset.csrfToken}
         />
     );
