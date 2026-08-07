@@ -42,3 +42,84 @@
 .dark .ck.ck-editor__main > .ck-editor__editable:not(.ck-focused) {
     border-color: #374151;
 }
+
+/* ============================================================
+   Print: hanya dokumen (isi yang diedit) yang dicetak di
+   halaman /kak/{id}/edit-docx, bukan chrome aplikasi/editor.
+   ============================================================ */
+@media print {
+    header,
+    footer {
+        display: none !important;
+    }
+
+    .docx-editor-toolbar {
+        display: none !important;
+    }
+
+    .docx-editor-canvas {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        border-radius: 0 !important;
+    }
+
+    /* Shell editor mengembang penuh (inline style height:100% ditimpa). */
+    .ep-root.docx-editor,
+    .ep-root.docx-editor > div,
+    .ep-root .docx-editor__content {
+        position: static !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    /* Sembunyikan chrome editor: title bar, menu bar, toolbar, ruler,
+       nav sidebar, dan penunjuk halaman. */
+    .ep-root .docx-toolbar,
+    .ep-root .docx-toolbar__group,
+    .ep-root .docx-font-notice,
+    .ep-root .docx-horizontal-ruler,
+    .ep-root .docx-vertical-ruler,
+    .ep-root .docx-editor__sidebar,
+    .ep-root .docx-editor__outline,
+    .ep-root .docx-nav__panel-shell,
+    .ep-root .docx-editor__page-number,
+    .ep-root [role="menubar"],
+    .ep-root [data-testid="title-bar"] {
+        display: none !important;
+    }
+
+    /* Kontainer scroll menampilkan semua halaman. */
+    .ep-root .docx-editor__scroll-container,
+    .ep-root .ep-one-surface__viewport {
+        position: static !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .ep-root .docx-paginated-surface,
+    .ep-root .docx-pages {
+        margin: 0 !important;
+        gap: 0 !important;
+        width: 100% !important;
+    }
+
+    /* Halaman dokumen: tanpa bayangan, satu halaman per lembar. */
+    .ep-root .docx-page {
+        box-shadow: none !important;
+        margin: 0 auto !important;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .ep-root .docx-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+}

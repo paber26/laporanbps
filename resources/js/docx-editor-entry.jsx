@@ -99,7 +99,7 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, csrfTok
 
     return (
         <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
-            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-t-lg px-4 py-3 flex flex-wrap items-center gap-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="docx-editor-toolbar bg-white dark:bg-gray-800 shadow-sm rounded-t-lg px-4 py-3 flex flex-wrap items-center gap-3 border-b border-gray-200 dark:border-gray-700">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Edit Dokumen:</span>
                 <button
                     type="button"
@@ -136,6 +136,7 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, csrfTok
             </div>
 
             <div className="flex-1 min-h-0 bg-gray-200 dark:bg-gray-900 rounded-b-lg overflow-hidden">
+                <div className="docx-editor-canvas h-full">
                 {loading && (
                     <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
                         Memuat dokumen...
@@ -155,6 +156,7 @@ function KakDocxEditor({ kakId, originalUrl, saveUrl, editedUrl, pdfUrl, csrfTok
                         onError={handleEditorError}
                     />
                 )}
+                </div>
             </div>
         </div>
     );
