@@ -41,7 +41,7 @@
                 </label>
                 <a id="btn-word" href="{{ route('kak.word', $kak) }}?ukuran=a4" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>
                 <a id="btn-pdf" href="{{ route('kak.pdf', $kak) }}?ukuran=a4" target="_blank" class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
-                <a id="btn-docx-pdf" href="{{ route('kak.docx.pdf', $kak) }}?ukuran=a4" target="_blank" class="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">PDF Hasil Edit</a>
+                <a href="{{ route('kak.docx.download', $kak) }}" class="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">Unduh DOCX Hasil Edit</a>
 
                 <form action="{{ route('kak.docx.upload', $kak) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
                     @csrf
@@ -143,14 +143,11 @@
             const sel = document.getElementById('ukuran-kertas');
             const btnWord = document.getElementById('btn-word');
             const btnPdf = document.getElementById('btn-pdf');
-            const btnDocxPdf = document.getElementById('btn-docx-pdf');
             const baseWord = "{{ route('kak.word', $kak) }}";
             const basePdf = "{{ route('kak.pdf', $kak) }}";
-            const baseDocxPdf = "{{ route('kak.docx.pdf', $kak) }}";
             sel.addEventListener('change', () => {
                 btnWord.href = baseWord + '?ukuran=' + sel.value;
                 btnPdf.href = basePdf + '?ukuran=' + sel.value;
-                btnDocxPdf.href = baseDocxPdf + '?ukuran=' + sel.value;
             });
         })();
     </script>

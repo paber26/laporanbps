@@ -124,16 +124,10 @@ class KakController extends Controller
     }
 
     /**
-     * Cetak PDF dari DOCX hasil upload (dari Word).
-     *
-     * DOCX diurai langsung dari XML sehingga penomoran list, tabel, dan
-     * gambar dipertahankan. HTML output dibalut CSS yang sama dengan
-     * template PDF KAK agar tampilannya seragam.
+     * Unduh DOCX hasil upload (dari Word).
      */
-    public function exportEditedPdf(Request $request, Kak $kak): Response
+    public function downloadEditedDocx(Kak $kak): Response
     {
-        $ukuran = strtolower($request->query('ukuran', 'a4'));
-
         $disk = Storage::disk('local');
         $editedPath = $kak->docx_edited_path ?? "kak/{$kak->id}/edited.docx";
 
@@ -141,59 +135,17 @@ class KakController extends Controller
             abort(404, 'Dokumen belum diunggah.');
         }
 
-        $converter = new \App\Services\DocxToPdfConverter;
-        $body = $converter->toHtml($disk->path($editedPath));
-
-        // Ukuran kertas: query ?ukuran=a4|f4 menimpa ukuran dari dokumen.
-        $paper = $ukuran === 'a4' || $ukuran === 'f4' || $ukuran === 'folio'
-            ? $this->paperSize($ukuran)
-            : $converter->paperSize();
-
-        $paperSizeCss = is_array($paper) ? sprintf('%fpt %fpt', $paper[2], $paper[3]) : $paper;
-
-        $fullHtml = <<<HTML
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<title>KAK — {$kak->judul}</title>
-<style>
-    @page { size: {$paperSizeCss}; }
-    * { font-family: 'Times New Roman', 'DejaVu Serif', serif; }
-    body { font-size: 12pt; color: #000; line-height: 1.5; }
-    p { margin: 0 0 8px; }
-    p.spacer { margin: 0; line-height: 1.2; }
-    p.logo { text-align: center; margin-bottom: 4px; }
-    p.logo img { width: 90px; height: 70px; }
-    p.bagian-judul { font-weight: bold; text-transform: uppercase; margin: 18px 0 8px; }
-    ol { margin: 0 0 8px; padding-left: 24px; text-align: justify; }
-    ol li { margin-bottom: 4px; }
-    table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-    table.data-table, .data-table td { border: 1px solid #000; }
-    .data-table td { padding: 6px 8px; vertical-align: top; font-size: 11pt; }
-    table.ttd-table { border: none; margin-top: 40px; }
-    .ttd-table td { border: none; text-align: center; vertical-align: top; width: 50%; padding: 0 12px; }
-    img { max-width: 100%; height: auto; }
-</style>
-</head>
-<body>
-{$body}
-</body>
-</html>
-HTML;
-
-        $pdf = Pdf::loadHTML($fullHtml)
-            ->setPaper($paper, 'portrait')
-            ->setWarnings(false);
-
-        $namaFile = 'KAK-'.str($kak->judul)->slug().'-edited.pdf';
-
-        return $pdf->stream($namaFile);
+        return response($disk->get($editedPath), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="KAK-'.str($kak->judul)->slug().'-edited.docx"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**
      * Unggah DOCX hasil edit dari Word (multipart) lalu simpan sebagai
-     * edited.docx untuk dicetak via exportEditedPdf.
+     * edited.docx untuk diunduh via downloadEditedDocx.
      */
     public function uploadDocx(Request $request, Kak $kak): RedirectResponse
     {

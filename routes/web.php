@@ -39,7 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Kerangka Acuan Kerja (KAK) + cetak.
     Route::get('kak/{kak}/word', [KakController::class, 'exportWord'])->name('kak.word');
     Route::get('kak/{kak}/pdf', [KakController::class, 'exportPdf'])->name('kak.pdf');
-    Route::get('kak/{kak}/docx/pdf', [KakController::class, 'exportEditedPdf'])->name('kak.docx.pdf');
+    Route::get('kak/{kak}/docx/download', [KakController::class, 'downloadEditedDocx'])->name('kak.docx.download');
     Route::post('kak/{kak}/docx/upload', [KakController::class, 'uploadDocx'])->name('kak.docx.upload');
     Route::resource('kak', KakController::class);
 });
