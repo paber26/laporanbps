@@ -45,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('kak/{kak}/docx/original', [KakController::class, 'getOriginalDocx'])->name('kak.docx.original');
     Route::get('kak/{kak}/docx/edited', [KakController::class, 'getEditedDocx'])->name('kak.docx.edited');
     Route::post('kak/{kak}/docx/save', [KakController::class, 'saveEditedDocx'])->name('kak.docx.save');
+    Route::post('kak/{kak}/docx/upload', [KakController::class, 'uploadDocx'])->name('kak.docx.upload');
     Route::resource('kak', KakController::class);
 });
 

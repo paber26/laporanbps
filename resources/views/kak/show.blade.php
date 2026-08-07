@@ -42,6 +42,15 @@
                 <a id="btn-word" href="{{ route('kak.word', $kak) }}?ukuran=a4" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>
                 <a id="btn-pdf" href="{{ route('kak.pdf', $kak) }}?ukuran=a4" target="_blank" class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
                 <a href="{{ route('kak.edit-docx', $kak) }}" class="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">Edit DOCX</a>
+
+                <form action="{{ route('kak.docx.upload', $kak) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
+                    @csrf
+                    <label class="text-sm text-gray-600 dark:text-gray-400">Unggah DOCX
+                        <input type="file" name="file" accept=".docx" required
+                               class="ml-1 text-sm text-gray-600 dark:text-gray-300 file:mr-2 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-gray-200 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-200 file:text-sm hover:file:bg-gray-300 dark:hover:file:bg-gray-600">
+                    </label>
+                    <button type="submit" class="px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Unggah</button>
+                </form>
             </div>
 
             {{-- Dokumen (mirip hasil cetak) --}}

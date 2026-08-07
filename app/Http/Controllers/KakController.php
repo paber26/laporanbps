@@ -292,10 +292,28 @@ HTML;
     }
 
     /**
+     * Unggah DOCX hasil edit dari Word (multipart) lalu simpan sebagai
+     * edited.docx untuk dicetak via exportEditedPdf.
+     */
+    public function uploadDocx(Request $request, Kak $kak): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:docx', 'max:10240'],
+        ]);
+
+        $disk = Storage::disk('local');
+        $edited = 'kak/'.$kak->id.'/edited.docx';
+
+        $disk->putFileAs(dirname($edited), $request->file('file'), basename($edited));
+        $kak->update(['docx_edited_path' => $edited]);
+
+        return back()->with('status', 'Dokumen DOCX berhasil diunggah.');
+    }
+
+    /**
      * Alirkan file DOCX sebagai inline response bila ada.
      */
-    protected function streamDocx(?string $path, string $namaFile): Response
-    {
+    protected function streamDocx(?string $path, string $namaFile): Response    {
         $disk = Storage::disk('local');
 
         if (! $path || ! $disk->exists($path)) {
