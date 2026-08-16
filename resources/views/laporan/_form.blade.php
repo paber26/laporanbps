@@ -826,7 +826,6 @@
             if (imagePasted) {
                 e.preventDefault(); // Mencegah scroll atau default paste lain
                 scheduleSave();
-                const dokContainer = document.getElementById('dok-container');
                 if (dokContainer) {
                     setTimeout(() => {
                         dokContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -835,6 +834,50 @@
             }
         }
     });
+
+    // ============ DRAG AND DROP LISTENER ============
+    if (dokContainer) {
+        const dropZone = dokContainer.parentElement; // Ambil div pembungkus yang lebih besar
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('border-2', 'border-dashed', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('border-2', 'border-dashed', 'border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files && files.length > 0) {
+                let imageDropped = false;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type.startsWith('image/') || file.name.match(/\.(heic|heif)$/i)) {
+                        const row = addDokRow();
+                        uploadFileToRow(row, file);
+                        imageDropped = true;
+                    }
+                }
+                if (imageDropped) scheduleSave();
+            }
+        }, false);
+    }
 
 })();
 </script>
