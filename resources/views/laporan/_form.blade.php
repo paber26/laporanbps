@@ -793,7 +793,9 @@
                     }, 100);
                 }
             } else {
-                alert('Tidak ditemukan gambar di clipboard Anda. Silakan salin gambar terlebih dahulu.');
+                let typesFound = [];
+                for (const item of items) { typesFound.push(...item.types); }
+                alert('Tidak ditemukan gambar di clipboard (Tipe yang terbaca: ' + (typesFound.join(', ') || 'kosong') + ').\n\nJika Anda menyalin *file gambar* dari folder komputer (bukan menyalin gambarnya langsung), tombol ini mungkin tidak dapat membacanya.\n\nSOLUSI: Silakan klik sembarang tempat kosong di halaman ini, lalu tekan langsung Ctrl+V (atau Cmd+V) di keyboard Anda, atau gunakan tombol "+ Tambah Foto".');
             }
         } catch (err) {
             console.error('Gagal membaca clipboard:', err);
