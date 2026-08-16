@@ -762,6 +762,10 @@
     // ============ BUTTON PASTE LISTENER ============
     document.getElementById('btn-paste-clipboard')?.addEventListener('click', async function () {
         try {
+            if (!navigator.clipboard || !navigator.clipboard.read) {
+                alert('Browser Anda tidak mendukung tombol ini. Silakan gunakan pintasan keyboard (Ctrl+V / Cmd+V) di halaman ini untuk paste gambar.');
+                return;
+            }
             const items = await navigator.clipboard.read();
             let imagePasted = false;
             
@@ -789,11 +793,44 @@
                     }, 100);
                 }
             } else {
-                alert('Tidak ditemukan gambar di clipboard Anda.');
+                alert('Tidak ditemukan gambar di clipboard Anda. Silakan salin gambar terlebih dahulu.');
             }
         } catch (err) {
             console.error('Gagal membaca clipboard:', err);
-            alert('Gagal membaca clipboard. Pastikan browser memiliki izin untuk membaca clipboard, atau gunakan tombol Tambah Foto.');
+            alert('Gagal membaca clipboard. Pastikan Anda mengizinkan browser untuk mengakses clipboard.\n\nAlternatif: Anda bisa langsung menekan Ctrl+V (atau Cmd+V) di halaman ini untuk menempelkan foto.');
+        }
+    });
+
+    // ============ GLOBAL PASTE LISTENER (CTRL+V) ============
+    document.addEventListener('paste', function (e) {
+        // Jangan tangkap paste kalau user sedang mengetik di input teks (kecuali kita mau)
+        const active = document.activeElement;
+        const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+        
+        // Jika fokus di input, biarkan default behavior (misal paste text atau CKEditor upload)
+        if (isInput) return;
+
+        if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+            let imagePasted = false;
+            for (let i = 0; i < e.clipboardData.files.length; i++) {
+                const file = e.clipboardData.files[i];
+                if (file.type.startsWith('image/')) {
+                    const row = addDokRow();
+                    uploadFileToRow(row, file);
+                    imagePasted = true;
+                }
+            }
+            
+            if (imagePasted) {
+                e.preventDefault(); // Mencegah scroll atau default paste lain
+                scheduleSave();
+                const dokContainer = document.getElementById('dok-container');
+                if (dokContainer) {
+                    setTimeout(() => {
+                        dokContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 100);
+                }
+            }
         }
     });
 
