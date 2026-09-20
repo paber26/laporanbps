@@ -1,0 +1,70 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laporanbps_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      APP_NAME: "Laporan BPS"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: "http://localhost:8088"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: laporanbps
+      DB_USERNAME: laporanbps_user
+      DB_PASSWORD: laporanbps_password
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - laporanbps_network
+
+  web:
+    image: nginx:alpine
+    container_name: laporanbps_web
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - laporanbps_network
+
+  db:
+    image: mysql:8.0
+    container_name: laporanbps_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: laporanbps
+      MYSQL_USER: laporanbps_user
+      MYSQL_PASSWORD: laporanbps_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3309:3306"
+    volumes:
+      - laporanbps_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "laporanbps_user", "-plaporanbps_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - laporanbps_network
+
+networks:
+  laporanbps_network:
+    driver: bridge
+
+volumes:
+  laporanbps_mysql_data:
+    driver: local

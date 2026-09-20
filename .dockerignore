@@ -1,0 +1,15 @@
+node_modules
+vendor
+.git
+.github
+.env
+.env.backup
+.phpunit.result.cache
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+!storage/framework/cache/.gitignore
+!storage/framework/sessions/.gitignore
+!storage/framework/views/.gitignore
+!storage/logs/.gitignore
