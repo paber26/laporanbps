@@ -19,6 +19,8 @@ services:
       DB_DATABASE: laporanbps
       DB_USERNAME: laporanbps_user
       DB_PASSWORD: laporanbps_password
+      SESSION_DRIVER: database
+      SESSION_LIFETIME: 43200
     depends_on:
       db:
         condition: service_healthy
