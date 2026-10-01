@@ -121,4 +121,57 @@ class DokumentasiTest extends TestCase
         $responsePegawaiB->assertSee('Foto Unik Beta');
         $responsePegawaiB->assertDontSee('Foto Unik Alpha');
     }
+
+    public function test_thumbnail_generation_and_command(): void
+    {
+        $user = User::factory()->create();
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $pegawai = Pegawai::create([
+            'nama' => 'Test Officer',
+            'nip' => '123456789012345678',
+            'jabatan' => 'Statistisi',
+            'pangkat_golongan' => 'III/a',
+            'unit_kerja' => 'BPS',
+        ]);
+
+        $laporan = Laporan::create([
+            'pegawai_id' => $pegawai->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Test Laporan',
+            'perihal_laporan' => 'Test Perihal',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang',
+            'tanggal_laporan' => '2026-06-29',
+            'lokasi_tujuan' => 'Test Lokasi',
+        ]);
+
+        // Buat file gambar dummy JPEG menggunakan GD
+        $img = imagecreatetruecolor(800, 600);
+        $red = imagecolorallocate($img, 255, 0, 0);
+        imagefilledrectangle($img, 0, 0, 800, 600, $red);
+        ob_start();
+        imagejpeg($img);
+        $imageContent = ob_get_clean();
+        imagedestroy($img);
+
+        \Illuminate\Support\Facades\Storage::disk('public')->put('dokumentasi/test_sample.jpg', $imageContent);
+
+        $dok = LaporanDokumentasi::create([
+            'laporan_id' => $laporan->id,
+            'image_path' => 'dokumentasi/test_sample.jpg',
+            'keterangan' => 'Foto Uji Kompresi',
+            'urutan' => 1,
+        ]);
+
+        // Uji command generate-thumbs
+        $this->artisan('dokumentasi:generate-thumbs')
+            ->assertSuccessful();
+
+        $this->assertTrue(\Illuminate\Support\Facades\Storage::disk('public')->exists($dok->thumbnail_path));
+
+        // Uji thumbnail endpoint
+        $response = $this->actingAs($user)->get(route('dokumentasi.thumb', $dok));
+        $response->assertOk();
+    }
 }

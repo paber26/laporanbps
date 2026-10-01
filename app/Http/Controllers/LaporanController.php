@@ -463,11 +463,13 @@ class LaporanController extends Controller
                 continue;
             }
 
-            $laporan->dokumentasis()->create([
+            $createdDok = $laporan->dokumentasis()->create([
                 'image_path' => $path,
                 'keterangan' => $dok['keterangan'] ?? null,
                 'urutan' => ++$mulai,
             ]);
+
+            \App\Support\ImageCompressor::createThumbnail($path, $createdDok->thumbnail_path);
         }
     }
 

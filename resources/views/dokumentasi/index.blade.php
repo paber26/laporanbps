@@ -24,9 +24,11 @@
          x-data="{
              openModal: false,
              currentIndex: 0,
+             imageLoading: true,
              photos: {{ Js::from($dokumentasis->map(fn($d) => [
                  'id' => $d->id,
                  'url' => $d->url,
+                 'thumb_url' => $d->thumbnail_url,
                  'keterangan' => $d->keterangan ?: '',
                  'perihal' => $d->laporan?->perihal_laporan ?? 'Laporan Tanpa Judul',
                  'petugas' => $d->laporan?->pegawai?->nama ?? '-',
@@ -37,6 +39,7 @@
              ])) }},
              open(idx) {
                  this.currentIndex = idx;
+                 this.imageLoading = true;
                  this.openModal = true;
                  document.body.style.overflow = 'hidden';
              },
@@ -46,11 +49,13 @@
              },
              next() {
                  if (this.photos.length > 0) {
+                     this.imageLoading = true;
                      this.currentIndex = (this.currentIndex + 1) % this.photos.length;
                  }
              },
              prev() {
                  if (this.photos.length > 0) {
+                     this.imageLoading = true;
                      this.currentIndex = (this.currentIndex - 1 + this.photos.length) % this.photos.length;
                  }
              }
@@ -187,7 +192,7 @@
                             <div class="relative aspect-[4/3] bg-gray-100 dark:bg-gray-900 overflow-hidden cursor-pointer"
                                  @click="open({{ $index }})"
                                  title="Klik untuk memperbesar foto">
-                                <img src="{{ $dok->url }}"
+                                <img src="{{ $dok->thumbnail_url }}"
                                      alt="{{ $dok->keterangan ?: 'Dokumentasi ' . ($dok->laporan?->perihal_laporan ?? '') }}"
                                      loading="lazy"
                                      decoding="async"
@@ -195,13 +200,13 @@
 
                                 {{-- Dark gradient on hover --}}
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3 text-white">
-                                    <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                                        <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
                                         </svg>
-                                        Perbesar
+                                        Ukuran Asli
                                     </span>
-                                    <span class="text-[11px] bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-gray-200">
+                                    <span class="text-[11px] bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-gray-200">
                                         #{{ $dok->laporan_id }}
                                     </span>
                                 </div>
@@ -373,11 +378,22 @@
                  @click.outside="close()">
 
                 {{-- Image Display Area --}}
-                <div class="relative flex-1 flex items-center justify-center bg-black/60 min-h-[300px] max-h-[68vh] p-2 overflow-hidden">
+                <div class="relative flex-1 flex items-center justify-center bg-black/70 min-h-[320px] max-h-[68vh] p-2 overflow-hidden">
+                    {{-- Spinner saat foto ukuran asli sedang dimuat --}}
+                    <div x-show="imageLoading" class="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-gray-400 z-10">
+                        <svg class="animate-spin w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-xs font-medium text-gray-300">Memuat foto ukuran asli...</span>
+                    </div>
+
                     <template x-if="photos.length > 0">
                         <img :src="photos[currentIndex].url"
                              :alt="photos[currentIndex].keterangan || photos[currentIndex].perihal"
-                             class="max-h-[66vh] max-w-full w-auto object-contain rounded-lg shadow-lg select-none">
+                             @load="imageLoading = false"
+                             class="max-h-[66vh] max-w-full w-auto object-contain rounded-lg shadow-xl select-none transition-opacity duration-300"
+                             :class="imageLoading ? 'opacity-0' : 'opacity-100'">
                     </template>
                 </div>
 
@@ -385,11 +401,17 @@
                 <div class="bg-gray-900/95 border-t border-gray-800 p-4 sm:p-5 text-gray-200">
                     <template x-if="photos.length > 0">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div class="space-y-1 max-w-2xl">
-                                {{-- Counter badge --}}
-                                <div class="flex items-center gap-2">
+                            <div class="space-y-1.5 max-w-2xl">
+                                {{-- Counter badge & Ukuran Asli label --}}
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span class="text-[11px] font-mono uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded">
                                         Foto <span x-text="currentIndex + 1"></span> dari <span x-text="photos.length"></span>
+                                    </span>
+                                    <span class="text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Ukuran Asli
                                     </span>
                                     <span class="text-xs text-gray-400" x-text="photos[currentIndex].tanggal"></span>
                                     <span class="text-gray-500">•</span>

@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('laporan', LaporanController::class);
     Route::get('dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
+    Route::get('dokumentasi/{dokumentasi}/thumb', [DokumentasiController::class, 'thumbnail'])->name('dokumentasi.thumb');
     Route::resource('master-pembiayaan', MasterPembiayaanController::class)
         ->parameters(['master-pembiayaan' => 'masterPembiayaan'])
         ->except('show');

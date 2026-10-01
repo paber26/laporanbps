@@ -5,13 +5,40 @@ namespace App\Http\Controllers;
 use App\Models\Laporan;
 use App\Models\LaporanDokumentasi;
 use App\Models\Pegawai;
+use App\Support\ImageCompressor;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
 class DokumentasiController extends Controller
 {
+    /**
+     * Sajikan berkas thumbnail foto terkompresi.
+     */
+    public function thumbnail(LaporanDokumentasi $dokumentasi): Response
+    {
+        $thumbRelative = $dokumentasi->thumbnail_path;
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($thumbRelative)) {
+            if ($dokumentasi->image_path && $disk->exists($dokumentasi->image_path)) {
+                ImageCompressor::createThumbnail($dokumentasi->image_path, $thumbRelative);
+            }
+        }
+
+        if ($disk->exists($thumbRelative)) {
+            return response()->file($disk->path($thumbRelative), [
+                'Content-Type' => 'image/jpeg',
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ]);
+        }
+
+        // Fallback bila thumbnail belum bisa dibuat: alihkan ke gambar asli
+        return redirect($dokumentasi->url);
+    }
     /**
      * Tampilkan galeri foto dokumentasi kegiatan.
      */
