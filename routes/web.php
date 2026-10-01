@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DokumentasiController;
 use App\Http\Controllers\KakController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\MasterPembiayaanController;
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('laporan-uraian/upload-image', [LaporanController::class, 'uploadUraianImage'])->name('laporan.uraian.upload-image');
 
     Route::resource('laporan', LaporanController::class);
+    Route::get('dokumentasi', [DokumentasiController::class, 'index'])->name('dokumentasi.index');
     Route::resource('master-pembiayaan', MasterPembiayaanController::class)
         ->parameters(['master-pembiayaan' => 'masterPembiayaan'])
         ->except('show');

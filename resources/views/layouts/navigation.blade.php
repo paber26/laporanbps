@@ -18,6 +18,9 @@
                     <x-nav-link :href="route('laporan.index')" :active="request()->routeIs('laporan.*')">
                         {{ __('Laporan') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('dokumentasi.index')" :active="request()->routeIs('dokumentasi.*')">
+                        {{ __('Dokumentasi') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('master-pembiayaan.index')" :active="request()->routeIs('master-pembiayaan.*')">
                         {{ __('Master Pembiayaan') }}
                     </x-nav-link>
@@ -109,6 +112,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('laporan.index')" :active="request()->routeIs('laporan.*')">
                 {{ __('Laporan') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('dokumentasi.index')" :active="request()->routeIs('dokumentasi.*')">
+                {{ __('Dokumentasi') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('master-pembiayaan.index')" :active="request()->routeIs('master-pembiayaan.*')">
                 {{ __('Master Pembiayaan') }}

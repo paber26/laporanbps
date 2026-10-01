@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Laporan;
+use App\Models\LaporanDokumentasi;
+use App\Models\Pegawai;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+
+class DokumentasiController extends Controller
+{
+    /**
+     * Tampilkan galeri foto dokumentasi kegiatan.
+     */
+    public function index(Request $request): View
+    {
+        $query = LaporanDokumentasi::with(['laporan.pegawai', 'laporan.pembiayaan'])
+            ->latest('id');
+
+        // Filter berdasarkan pencarian kata kunci
+        if ($search = trim((string) $request->input('search'))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('keterangan', 'like', "%{$search}%")
+                    ->orWhereHas('laporan', function ($lq) use ($search) {
+                        $lq->where('perihal_laporan', 'like', "%{$search}%")
+                            ->orWhere('tempat_laporan', 'like', "%{$search}%")
+                            ->orWhere('lokasi_tujuan', 'like', "%{$search}%")
+                            ->orWhere('judul_laporan', 'like', "%{$search}%")
+                            ->orWhereHas('pegawai', function ($pq) use ($search) {
+                                $pq->where('nama', 'like', "%{$search}%")
+                                    ->orWhere('nip', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        // Filter berdasarkan pegawai tertentu
+        if ($pegawaiId = $request->input('pegawai_id')) {
+            $query->whereHas('laporan', function ($lq) use ($pegawaiId) {
+                $lq->where('pegawai_id', $pegawaiId);
+            });
+        }
+
+        // Filter berdasarkan laporan tertentu
+        if ($laporanId = $request->input('laporan_id')) {
+            $query->where('laporan_id', $laporanId);
+        }
+
+        // Filter tahun tanggal laporan
+        if ($tahun = $request->input('tahun')) {
+            $query->whereHas('laporan', function ($lq) use ($tahun) {
+                $lq->whereYear('tanggal_laporan', $tahun);
+            });
+        }
+
+        // Filter bulan tanggal laporan
+        if ($bulan = $request->input('bulan')) {
+            $query->whereHas('laporan', function ($lq) use ($bulan) {
+                $lq->whereMonth('tanggal_laporan', $bulan);
+            });
+        }
+
+        $dokumentasis = $query->paginate(24)->withQueryString();
+
+        // Data statistik ringkas
+        $totalFoto = LaporanDokumentasi::count();
+        $totalLaporanDenganFoto = Laporan::has('dokumentasis')->count();
+
+        // Dropdown options
+        $pegawais = Pegawai::orderBy('nama')->get(['id', 'nama']);
+        $laporans = Laporan::has('dokumentasis')
+            ->orderByDesc('id')
+            ->get(['id', 'perihal_laporan', 'lokasi_tujuan']);
+
+        // Daftar tahun unik untuk filter
+        $tahuns = Laporan::has('dokumentasis')
+            ->pluck('tanggal_laporan')
+            ->filter()
+            ->map(function ($d) {
+                return $d instanceof CarbonInterface ? $d->year : Carbon::parse($d)->year;
+            })
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        return view('dokumentasi.index', compact(
+            'dokumentasis',
+            'totalFoto',
+            'totalLaporanDenganFoto',
+            'pegawais',
+            'laporans',
+            'tahuns'
+        ));
+    }
+}
