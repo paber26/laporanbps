@@ -116,25 +116,25 @@
             <x-input-error :messages="$errors->get('tujuan_surat')" class="mt-1" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <x-input-label for="tempat_laporan" value="Tempat Penandatanganan" />
-                <x-text-input id="tempat_laporan" name="tempat_laporan" type="text" class="mt-1 block w-full"
-                    :value="$val('tempat_laporan')" required placeholder="mis: Amurang Barat" />
-                <x-input-error :messages="$errors->get('tempat_laporan')" class="mt-1" />
-            </div>
-            <div>
-                <x-input-label for="tanggal_laporan" value="Tanggal Laporan" />
-                <x-text-input id="tanggal_laporan" name="tanggal_laporan" type="date" class="mt-1 block w-full"
-                    :value="$val('tanggal_laporan')" required />
-                <x-input-error :messages="$errors->get('tanggal_laporan')" class="mt-1" />
-            </div>
-            <div>
-                <x-input-label for="lokasi_tujuan" value="Lokasi Tujuan Kegiatan" />
-                <x-text-input id="lokasi_tujuan" name="lokasi_tujuan" type="text" class="mt-1 block w-full"
-                    :value="$val('lokasi_tujuan')" required placeholder="mis: Minahasa Selatan" />
-                <x-input-error :messages="$errors->get('lokasi_tujuan')" class="mt-1" />
-            </div>
+        <div>
+            <x-input-label for="tempat_laporan" value="Tempat Penandatanganan" />
+            <x-text-input id="tempat_laporan" name="tempat_laporan" type="text" class="mt-1 block w-full"
+                :value="$val('tempat_laporan')" required placeholder="mis: Amurang Barat" />
+            <x-input-error :messages="$errors->get('tempat_laporan')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="tanggal_laporan" value="Tanggal Laporan" />
+            <x-text-input id="tanggal_laporan" name="tanggal_laporan" type="date" class="mt-1 block w-full"
+                :value="$val('tanggal_laporan')" required />
+            <x-input-error :messages="$errors->get('tanggal_laporan')" class="mt-1" />
+        </div>
+
+        <div>
+            <x-input-label for="lokasi_tujuan" value="Lokasi Tujuan Kegiatan" />
+            <x-text-input id="lokasi_tujuan" name="lokasi_tujuan" type="text" class="mt-1 block w-full"
+                :value="$val('lokasi_tujuan')" required placeholder="mis: Minahasa Selatan" />
+            <x-input-error :messages="$errors->get('lokasi_tujuan')" class="mt-1" />
         </div>
             </div>
         </div>
