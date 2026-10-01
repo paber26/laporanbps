@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Laporan extends Model
 {
@@ -46,5 +47,23 @@ class Laporan extends Model
     public function dokumentasis(): HasMany
     {
         return $this->hasMany(LaporanDokumentasi::class)->orderBy('urutan');
+    }
+
+    /**
+     * Dapatkan daftar tanggal kegiatan unik dari uraian, diurutkan.
+     *
+     * @return \Illuminate\Support\Collection<int, \Carbon\CarbonInterface>
+     */
+    public function getTanggalKegiatanListAttribute()
+    {
+        return $this->uraians
+            ->pluck('tanggal_kegiatan')
+            ->filter()
+            ->map(function ($d) {
+                return $d instanceof \Carbon\CarbonInterface ? $d : Carbon::parse($d);
+            })
+            ->unique(fn ($d) => $d->format('Y-m-d'))
+            ->sort(fn ($a, $b) => $a->timestamp <=> $b->timestamp)
+            ->values();
     }
 }

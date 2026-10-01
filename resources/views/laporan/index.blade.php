@@ -22,6 +22,8 @@
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3">Perihal</th>
                                 <th class="px-4 py-3">Petugas</th>
+                                <th class="px-4 py-3">Lokasi Tujuan Kegiatan</th>
+                                <th class="px-4 py-3">Tanggal Kegiatan</th>
                                 <th class="px-4 py-3">Tempat/Tanggal</th>
                                 <th class="px-4 py-3 text-center">Uraian</th>
                                 <th class="px-4 py-3 text-center">Foto</th>
@@ -39,6 +41,27 @@
                                     </td>
                                     <td class="px-4 py-3">{{ $laporan->pegawai->nama }}</td>
                                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                        {{ $laporan->lokasi_tujuan ?: '-' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                        @php
+                                            $tglKegiatan = $laporan->tanggal_kegiatan_list;
+                                        @endphp
+                                        @if ($tglKegiatan->isEmpty())
+                                            <span class="text-gray-400">-</span>
+                                        @elseif ($tglKegiatan->count() === 1)
+                                            {{ $tglKegiatan[0]->translatedFormat('j F Y') }}
+                                        @elseif ($tglKegiatan->count() === 2)
+                                            {{ $tglKegiatan[0]->translatedFormat('j F Y') }}<br>
+                                            {{ $tglKegiatan[1]->translatedFormat('j F Y') }}
+                                        @else
+                                            <span title="{{ $tglKegiatan->map(fn($d) => $d->translatedFormat('j F Y'))->implode(', ') }}">
+                                                {{ $tglKegiatan->first()->translatedFormat('j F Y') }} s.d.<br>
+                                                {{ $tglKegiatan->last()->translatedFormat('j F Y') }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                         {{ $laporan->tempat_laporan }},<br>
                                         {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}
                                     </td>
@@ -62,7 +85,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Belum ada laporan. Silakan buat laporan baru.</td>
+                                    <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Belum ada laporan. Silakan buat laporan baru.</td>
                                 </tr>
                             @endforelse
                         </tbody>

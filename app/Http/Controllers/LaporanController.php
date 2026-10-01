@@ -39,7 +39,11 @@ class LaporanController extends Controller
      */
     public function index(): View
     {
-        $laporans = Laporan::with(['pegawai', 'pembiayaan'])
+        $laporans = Laporan::with([
+                'pegawai',
+                'pembiayaan',
+                'uraians:id,laporan_id,tanggal_kegiatan,urutan',
+            ])
             ->withCount(['uraians', 'dokumentasis'])
             ->latest()
             ->paginate(10);
