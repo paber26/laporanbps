@@ -33,8 +33,8 @@
                  'perihal' => $d->laporan?->perihal_laporan ?? 'Laporan Tanpa Judul',
                  'petugas' => $d->laporan?->pegawai?->nama ?? '-',
                  'nip' => $d->laporan?->pegawai?->nip ?? '',
-                 'lokasi' => $d->laporan?->lokasi_tujuan ?? '-',
-                 'tanggal' => $d->laporan?->tanggal_laporan?->translatedFormat('j F Y') ?? '-',
+                 'lokasi' => $d->laporan?->lokasi_tujuan ?: ($d->laporan?->tempat_laporan ?? '-'),
+                 'tanggal' => $d->laporan?->tanggal_kegiatan_formatted ?? ($d->laporan?->tanggal_laporan?->translatedFormat('j F Y') ?? '-'),
                  'laporan_url' => $d->laporan ? route('laporan.show', $d->laporan) : '#',
              ])) }},
              open(idx) {
@@ -143,8 +143,14 @@
                                     class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
                                 <option value="">Semua Laporan</option>
                                 @foreach ($laporans as $lap)
-                                    <option value="{{ $lap->id }}" @selected(request('laporan_id') == $lap->id)>
-                                        #{{ $lap->id }} - {{ Str::limit($lap->perihal_laporan, 35) }} ({{ $lap->lokasi_tujuan }})
+                                    @php
+                                        $lokasi = $lap->lokasi_tujuan ?: ($lap->tempat_laporan ?: '-');
+                                        $tgl = $lap->tanggal_kegiatan_formatted;
+                                    @endphp
+                                    <option value="{{ $lap->id }}"
+                                            title="#{{ $lap->id }} - {{ $lap->perihal_laporan }} (Lokasi: {{ $lokasi }} | Tgl: {{ $tgl }})"
+                                            @selected(request('laporan_id') == $lap->id)>
+                                        #{{ $lap->id }} - {{ Str::limit($lap->perihal_laporan, 50) }} (Lokasi: {{ $lokasi }} | Tgl: {{ $tgl }})
                                     </option>
                                 @endforeach
                             </select>
@@ -258,12 +264,23 @@
                                         <span class="truncate" title="{{ $dok->laporan?->pegawai?->nama }}">{{ $dok->laporan?->pegawai?->nama ?? '-' }}</span>
                                     </div>
 
-                                    {{-- Tanggal Laporan --}}
+                                    {{-- Lokasi Tujuan --}}
+                                    @if ($dok->laporan?->lokasi_tujuan)
+                                        <div class="flex items-center gap-1.5 truncate">
+                                            <svg class="w-3.5 h-3.5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <span class="truncate" title="Lokasi Tujuan: {{ $dok->laporan->lokasi_tujuan }}">{{ $dok->laporan->lokasi_tujuan }}</span>
+                                        </div>
+                                    @endif
+
+                                    {{-- Tanggal Kegiatan --}}
                                     <div class="flex items-center gap-1.5 truncate">
                                         <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        <span>{{ $dok->laporan?->tanggal_laporan?->translatedFormat('j F Y') ?? '-' }}</span>
+                                        <span>{{ $dok->laporan?->tanggal_kegiatan_formatted ?? ($dok->laporan?->tanggal_laporan?->translatedFormat('j F Y') ?? '-') }}</span>
                                     </div>
                                 </div>
 

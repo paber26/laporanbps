@@ -44,8 +44,11 @@ class DokumentasiController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = LaporanDokumentasi::with(['laporan.pegawai', 'laporan.pembiayaan'])
-            ->latest('id');
+        $query = LaporanDokumentasi::with([
+            'laporan.pegawai',
+            'laporan.pembiayaan',
+            'laporan.uraians:id,laporan_id,tanggal_kegiatan,urutan',
+        ])->latest('id');
 
         // Filter berdasarkan pencarian kata kunci
         if ($search = trim((string) $request->input('search'))) {
@@ -99,8 +102,9 @@ class DokumentasiController extends Controller
         // Dropdown options
         $pegawais = Pegawai::orderBy('nama')->get(['id', 'nama']);
         $laporans = Laporan::has('dokumentasis')
+            ->with(['uraians:id,laporan_id,tanggal_kegiatan,urutan'])
             ->orderByDesc('id')
-            ->get(['id', 'perihal_laporan', 'lokasi_tujuan']);
+            ->get(['id', 'perihal_laporan', 'lokasi_tujuan', 'tempat_laporan', 'tanggal_laporan']);
 
         // Daftar tahun unik untuk filter
         $tahuns = Laporan::has('dokumentasis')

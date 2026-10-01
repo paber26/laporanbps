@@ -36,6 +36,14 @@ class DokumentasiTest extends TestCase
             'lokasi_tujuan' => 'Popontolen',
         ]);
 
+        $laporan->uraians()->create([
+            'tanggal_kegiatan' => '2026-06-25',
+            'jam_mulai' => '08:00',
+            'jam_selesai' => '12:00',
+            'uraian_text' => 'Pelaksanaan sosialisasi di Popontolen',
+            'urutan' => 1,
+        ]);
+
         $dok = LaporanDokumentasi::create([
             'laporan_id' => $laporan->id,
             'image_path' => 'dokumentasi/sample.jpg',
@@ -51,6 +59,7 @@ class DokumentasiTest extends TestCase
         $response->assertSee('Sosialisasi SE2026');
         $response->assertSee('Bernaldo Napitupulu');
         $response->assertSee('Popontolen');
+        $response->assertSee('Lokasi: Popontolen | Tgl: 25 Juni 2026');
     }
 
     public function test_dokumentasi_search_and_filter(): void
