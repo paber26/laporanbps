@@ -260,4 +260,25 @@ class LaporanIndexTest extends TestCase
         // Check modal data json payload contains the show_url for this laporan
         $response->assertSee(route('laporan.show', $laporan->id));
     }
+
+    public function test_laporan_index_renders_slide_over_filter_drawer(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Initial view without filters
+        $response = $this->actingAs($user)->get(route('laporan.index'));
+        $response->assertOk();
+        $response->assertSee('openFilterDrawer()', false);
+        $response->assertSee('x-show="showFilterDrawer"', false);
+        $response->assertSee('name="search"', false);
+        $response->assertSee('name="pegawai_id"', false);
+        $response->assertSee('name="tahun"', false);
+        $response->assertSee('name="bulan"', false);
+        $response->assertSee('name="per_page"', false);
+
+        // 2. View with active filter showing filter indicator and reset link
+        $resFilter = $this->actingAs($user)->get(route('laporan.index', ['search' => 'rapat']));
+        $resFilter->assertOk();
+        $resFilter->assertSee('Reset Semua');
+    }
 }

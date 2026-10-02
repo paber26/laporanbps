@@ -46,15 +46,40 @@
             ]
         ];
     });
+
+    $activeFilterCount = 0;
+    if (request('search')) $activeFilterCount++;
+    if (request('pegawai_id')) $activeFilterCount++;
+    if (request('tahun')) $activeFilterCount++;
+    if (request('bulan')) $activeFilterCount++;
+    if (request('per_page') && request('per_page') != '10') $activeFilterCount++;
+    $hasActiveFilter = $activeFilterCount > 0;
 @endphp
 
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-3">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Daftar Laporan</h2>
-            <a href="{{ route('laporan.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 shadow-sm transition">
-                + Buat Laporan
-            </a>
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        x-data
+                        @click="$dispatch('open-filter-drawer')"
+                        class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg transition {{ $hasActiveFilter ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700' }} shadow-sm">
+                    <svg class="w-4 h-4 {{ $hasActiveFilter ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    <span>Filter</span>
+                    @if ($hasActiveFilter)
+                        <span class="inline-flex items-center justify-center px-1.5 py-0.5 text-[11px] font-bold text-white bg-indigo-600 rounded-full">
+                            {{ $activeFilterCount }}
+                        </span>
+                    @endif
+                </button>
+
+                <a href="{{ route('laporan.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 shadow-sm transition">
+                    + Buat Laporan
+                </a>
+            </div>
         </div>
     </x-slot>
 
@@ -62,6 +87,7 @@
          x-data="{
              showModal: false,
              selected: null,
+             showFilterDrawer: false,
              laporans: {{ Js::from($modalData) }},
              openModal(id) {
                  this.selected = this.laporans[id] || null;
@@ -73,114 +99,104 @@
              closeModal() {
                  this.showModal = false;
                  this.selected = null;
-                 document.body.style.overflow = '';
+                 if (!this.showFilterDrawer) {
+                     document.body.style.overflow = '';
+                 }
+             },
+             openFilterDrawer() {
+                 this.showFilterDrawer = true;
+                 document.body.style.overflow = 'hidden';
+             },
+             closeFilterDrawer() {
+                 this.showFilterDrawer = false;
+                 if (!this.showModal) {
+                     document.body.style.overflow = '';
+                 }
+             },
+             handleEscape() {
+                 if (this.showModal) {
+                     this.closeModal();
+                 } else if (this.showFilterDrawer) {
+                     this.closeFilterDrawer();
+                 }
              }
          }"
-         @keydown.escape.window="closeModal()">
+         @open-filter-drawer.window="openFilterDrawer()"
+         @keydown.escape.window="handleEscape()">
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
             @if (session('status'))
                 <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
             @endif
 
-            {{-- ===================== TOOLBAR FILTER & PENCARIAN ===================== --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700/60">
-                <form method="GET" action="{{ route('laporan.index') }}" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                        {{-- Cari kata kunci --}}
-                        <div class="md:col-span-4">
-                            <label for="search" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Cari Kata Kunci</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </span>
-                                <input type="text" id="search" name="search" value="{{ request('search') }}"
-                                       placeholder="Perihal, lokasi, judul, petugas, uraian..."
-                                       class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
-                            </div>
-                        </div>
-
-                        {{-- Filter Petugas --}}
-                        <div class="md:col-span-3">
-                            <label for="pegawai_id" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Petugas</label>
-                            <select id="pegawai_id" name="pegawai_id"
-                                    class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
-                                <option value="">Semua Petugas</option>
-                                @foreach ($pegawais as $p)
-                                    <option value="{{ $p->id }}" @selected(request('pegawai_id') == $p->id)>
-                                        {{ $p->nama }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Filter Tahun --}}
-                        <div class="md:col-span-2">
-                            <label for="tahun" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tahun</label>
-                            <select id="tahun" name="tahun"
-                                    class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
-                                <option value="">Semua Tahun</option>
-                                @foreach ($tahuns as $thn)
-                                    <option value="{{ $thn }}" @selected(request('tahun') == $thn)>
-                                        {{ $thn }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Filter Bulan --}}
-                        <div class="md:col-span-2">
-                            <label for="bulan" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Bulan</label>
-                            <select id="bulan" name="bulan"
-                                    class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
-                                <option value="">Semua Bulan</option>
-                                @foreach ($bulans as $num => $namaBulan)
-                                    <option value="{{ $num }}" @selected(request('bulan') == $num)>
-                                        {{ $namaBulan }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Pilihan Jumlah Baris --}}
-                        <div class="md:col-span-1">
-                            <label for="per_page" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-nowrap">Baris</label>
-                            <select id="per_page" name="per_page" onchange="this.form.submit()"
-                                    title="Pilih jumlah baris yang ditampilkan per halaman"
-                                    class="w-full py-2 px-2 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
-                                <option value="10" @selected(request('per_page', '10') == '10')>10</option>
-                                <option value="25" @selected(request('per_page') == '25')>25</option>
-                                <option value="50" @selected(request('per_page') == '50')>50</option>
-                                <option value="100" @selected(request('per_page') == '100')>100</option>
-                                <option value="all" @selected(request('per_page') == 'all')>Semua</option>
-                            </select>
-                        </div>
+            {{-- Toolbar Ringkas & Status Filter Aktif --}}
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-700/60 shadow-sm">
+                <div class="flex items-center gap-2 flex-wrap text-xs text-gray-500 dark:text-gray-400">
+                    <div>
+                        Menampilkan <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->firstItem() ?? 0 }}</span>
+                        - <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->lastItem() ?? 0 }}</span>
+                        dari <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->total() }}</span> laporan
                     </div>
 
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                            Menampilkan <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->firstItem() ?? 0 }}</span>
-                            - <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->lastItem() ?? 0 }}</span>
-                            dari <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->total() }}</span> laporan
-                            @if (request()->hasAny(['search', 'pegawai_id', 'tahun', 'bulan']) && (request('search') || request('pegawai_id') || request('tahun') || request('bulan')))
-                                <span class="ml-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                                    Hasil Filter
+                    @if ($hasActiveFilter)
+                        <div class="flex items-center gap-1.5 flex-wrap ml-1">
+                            @if (request('search'))
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                    "{{ Str::limit(request('search'), 20) }}"
+                                    <a href="{{ request()->fullUrlWithQuery(['search' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
                                 </span>
                             @endif
-                        </div>
-                        <div class="flex items-center gap-2">
-                            @if (request()->hasAny(['search', 'pegawai_id', 'tahun', 'bulan', 'per_page']) && (request('search') || request('pegawai_id') || request('tahun') || request('bulan') || (request('per_page') && request('per_page') != '10')))
-                                <a href="{{ route('laporan.index') }}" class="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:underline">
-                                    Reset Filter
-                                </a>
+                            @if (request('pegawai_id'))
+                                @php $pNama = $pegawais->firstWhere('id', request('pegawai_id'))?->nama; @endphp
+                                @if ($pNama)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                        {{ Str::limit($pNama, 20) }}
+                                        <a href="{{ request()->fullUrlWithQuery(['pegawai_id' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                    </span>
+                                @endif
                             @endif
-                            <button type="submit" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg shadow-sm transition">
-                                Terapkan Filter
-                            </button>
+                            @if (request('tahun'))
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                    Tahun: {{ request('tahun') }}
+                                    <a href="{{ request()->fullUrlWithQuery(['tahun' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                </span>
+                            @endif
+                            @if (request('bulan'))
+                                @php $bNama = $bulans[(int)request('bulan')] ?? request('bulan'); @endphp
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                    Bulan: {{ $bNama }}
+                                    <a href="{{ request()->fullUrlWithQuery(['bulan' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                </span>
+                            @endif
+                            @if (request('per_page') && request('per_page') != '10')
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                    {{ request('per_page') == 'all' ? 'Semua Baris' : request('per_page') . ' Baris' }}
+                                    <a href="{{ request()->fullUrlWithQuery(['per_page' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                </span>
+                            @endif
+
+                            <a href="{{ route('laporan.index') }}"
+                               class="text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium ml-1">
+                                Reset Semua
+                            </a>
                         </div>
-                    </div>
-                </form>
+                    @endif
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button"
+                            @click="openFilterDrawer()"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition {{ $hasActiveFilter ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 shadow-sm' : 'bg-gray-50 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm' }}">
+                        <svg class="w-3.5 h-3.5 {{ $hasActiveFilter ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <span>Filter & Pencarian</span>
+                        @if ($hasActiveFilter)
+                            <span class="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-indigo-600 rounded-full">
+                                {{ $activeFilterCount }}
+                            </span>
+                        @endif
+                    </button>
+                </div>
             </div>
 
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
@@ -551,6 +567,190 @@
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===================== SLIDE-OVER DRAWER FILTER (SEBELAH KANAN) ===================== --}}
+        <div x-cloak
+             x-show="showFilterDrawer"
+             class="relative z-50"
+             aria-labelledby="slide-over-filter-title"
+             role="dialog"
+             aria-modal="true">
+
+            {{-- Backdrop background --}}
+            <div x-show="showFilterDrawer"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="closeFilterDrawer()"
+                 class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+
+            <div class="fixed inset-0 overflow-hidden">
+                <div class="absolute inset-0 overflow-hidden">
+                    <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                        <div x-show="showFilterDrawer"
+                             x-transition:enter="transform transition ease-in-out duration-300 sm:duration-400"
+                             x-transition:enter-start="translate-x-full"
+                             x-transition:enter-end="translate-x-0"
+                             x-transition:leave="transform transition ease-in-out duration-300 sm:duration-400"
+                             x-transition:leave-start="translate-x-0"
+                             x-transition:leave-end="translate-x-full"
+                             class="pointer-events-auto w-screen max-w-md">
+
+                            <form method="GET" action="{{ route('laporan.index') }}"
+                                  class="flex h-full flex-col bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700">
+
+                                {{-- Drawer Header --}}
+                                <div class="px-6 py-5 bg-gray-50/90 dark:bg-gray-900/90 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100" id="slide-over-filter-title">
+                                                Filter & Pencarian
+                                            </h2>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                Saring daftar laporan kegiatan
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button type="button"
+                                            @click="closeFilterDrawer()"
+                                            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700 transition">
+                                        <span class="sr-only">Tutup panel</span>
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                {{-- Drawer Body --}}
+                                <div class="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+                                    {{-- Cari kata kunci --}}
+                                    <div class="space-y-1.5">
+                                        <label for="drawer_search" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            Cari Kata Kunci
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                            </span>
+                                            <input type="text" id="drawer_search" name="search" value="{{ request('search') }}"
+                                                   placeholder="Perihal, lokasi tujuan, petugas, uraian..."
+                                                   class="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                        </div>
+                                        <p class="text-[11px] text-gray-400">Mencakup judul, perihal, petugas, lokasi tujuan, dan uraian.</p>
+                                    </div>
+
+                                    {{-- Petugas --}}
+                                    <div class="space-y-1.5">
+                                        <label for="drawer_pegawai_id" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            Petugas Pelaksana
+                                        </label>
+                                        <select id="drawer_pegawai_id" name="pegawai_id"
+                                                class="w-full py-2.5 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                            <option value="">Semua Petugas</option>
+                                            @foreach ($pegawais as $p)
+                                                <option value="{{ $p->id }}" @selected(request('pegawai_id') == $p->id)>
+                                                    {{ $p->nama }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    {{-- Tahun & Bulan --}}
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="space-y-1.5">
+                                            <label for="drawer_tahun" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                                Tahun
+                                            </label>
+                                            <select id="drawer_tahun" name="tahun"
+                                                    class="w-full py-2.5 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                                <option value="">Semua Tahun</option>
+                                                @foreach ($tahuns as $thn)
+                                                    <option value="{{ $thn }}" @selected(request('tahun') == $thn)>
+                                                        {{ $thn }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="space-y-1.5">
+                                            <label for="drawer_bulan" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                                Bulan
+                                            </label>
+                                            <select id="drawer_bulan" name="bulan"
+                                                    class="w-full py-2.5 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                                <option value="">Semua Bulan</option>
+                                                @foreach ($bulans as $num => $namaBulan)
+                                                    <option value="{{ $num }}" @selected(request('bulan') == $num)>
+                                                        {{ $namaBulan }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {{-- Pilihan Jumlah Baris --}}
+                                    <div class="space-y-1.5">
+                                        <label for="drawer_per_page" class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                            Baris Per Halaman
+                                        </label>
+                                        <select id="drawer_per_page" name="per_page"
+                                                class="w-full py-2.5 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                            <option value="10" @selected(request('per_page', '10') == '10')>10 Baris (Standar)</option>
+                                            <option value="25" @selected(request('per_page') == '25')>25 Baris</option>
+                                            <option value="50" @selected(request('per_page') == '50')>50 Baris</option>
+                                            <option value="100" @selected(request('per_page') == '100')>100 Baris</option>
+                                            <option value="all" @selected(request('per_page') == 'all')>Semua Baris (Tanpa Paginasi)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {{-- Drawer Footer --}}
+                                <div class="px-6 py-4 bg-gray-50/90 dark:bg-gray-900/90 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shrink-0">
+                                    @if ($hasActiveFilter)
+                                        <a href="{{ route('laporan.index') }}"
+                                           class="px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:underline">
+                                            Reset Semua
+                                        </a>
+                                    @else
+                                        <button type="button"
+                                                @click="closeFilterDrawer()"
+                                                class="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                            Batal
+                                        </button>
+                                    @endif
+
+                                    <div class="flex items-center gap-2">
+                                        <button type="button"
+                                                @click="closeFilterDrawer()"
+                                                class="px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                                            Tutup
+                                        </button>
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>Terapkan Filter</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
