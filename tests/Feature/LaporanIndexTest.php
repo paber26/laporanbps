@@ -214,4 +214,50 @@ class LaporanIndexTest extends TestCase
         $resAll->assertSee('Laporan Unik Nomor 15');
         $resAll->assertSee('Laporan Unik Nomor 1');
     }
+
+    public function test_laporan_index_renders_popup_modal_with_detail_button(): void
+    {
+        $user = User::factory()->create();
+
+        $pegawai = Pegawai::create([
+            'nama' => 'Petugas Modal Test',
+            'nip' => '199501012020011005',
+            'jabatan' => 'Statistisi Pertama',
+            'pangkat_golongan' => 'III/a',
+            'unit_kerja' => 'BPS Minsel',
+        ]);
+
+        $laporan = Laporan::create([
+            'pegawai_id' => $pegawai->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Judul Modal Test',
+            'perihal_laporan' => 'Perihal Khusus Popup Modal',
+            'tujuan_surat' => 'Kepala BPS Minahasa Selatan',
+            'tempat_laporan' => 'Amurang Barat',
+            'tanggal_laporan' => '2026-08-15',
+            'lokasi_tujuan' => 'Kecamatan Tumpaan',
+        ]);
+
+        LaporanUraian::create([
+            'laporan_id' => $laporan->id,
+            'tanggal_kegiatan' => '2026-08-15',
+            'jam_mulai' => '08:30',
+            'jam_selesai' => '15:00',
+            'uraian_text' => 'Koordinasi awal di kantor camat',
+            'urutan' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('laporan.index'));
+
+        $response->assertOk();
+        // Check button Lihat with openModal
+        $response->assertSee("openModal({$laporan->id})", false);
+        // Check modal overlay and Alpine.js state
+        $response->assertSee('x-show="showModal"', false);
+        // Check detail button with show_url binding
+        $response->assertSee(':href="selected.show_url"', false);
+        $response->assertSee('Detail');
+        // Check modal data json payload contains the show_url for this laporan
+        $response->assertSee(route('laporan.show', $laporan->id));
+    }
 }

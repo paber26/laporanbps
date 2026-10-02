@@ -1,14 +1,82 @@
+@php
+    $modalData = $laporans->getCollection()->mapWithKeys(function ($lap) {
+        return [
+            $lap->id => [
+                'id' => $lap->id,
+                'judul' => $lap->judul_laporan,
+                'perihal' => $lap->perihal_laporan,
+                'tujuan_surat' => $lap->tujuan_surat,
+                'tempat_laporan' => $lap->tempat_laporan,
+                'tanggal_laporan' => $lap->tanggal_laporan?->translatedFormat('j F Y') ?? '-',
+                'lokasi_tujuan' => $lap->lokasi_tujuan ?: '-',
+                'tanggal_kegiatan' => $lap->tanggal_kegiatan_formatted,
+                'pegawai' => [
+                    'nama' => $lap->pegawai->nama ?? '-',
+                    'nip' => $lap->pegawai->nip ?? '-',
+                    'jabatan' => $lap->pegawai->jabatan ?? '-',
+                    'pangkat_golongan' => $lap->pegawai->pangkat_golongan ?? '-',
+                    'unit_kerja' => $lap->pegawai->unit_kerja ?? '-',
+                ],
+                'pembiayaan' => $lap->pembiayaan ? [
+                    'program' => $lap->pembiayaan->program,
+                    'kegiatan' => $lap->pembiayaan->kegiatan,
+                    'ro' => $lap->pembiayaan->ro,
+                    'komponen' => $lap->pembiayaan->komponen,
+                    'akun' => $lap->pembiayaan->akun,
+                ] : null,
+                'uraians' => $lap->uraians->map(function ($u) {
+                    return [
+                        'tanggal' => $u->tanggal_kegiatan ? $u->tanggal_kegiatan->translatedFormat('l, j F Y') : '-',
+                        'jam' => trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? ' - ' : '') . ($u->jam_selesai ?? '')),
+                        'html' => $u->uraian_html,
+                    ];
+                })->values(),
+                'dokumentasis' => $lap->dokumentasis->map(function ($d) {
+                    return [
+                        'id' => $d->id,
+                        'url' => $d->url,
+                        'thumb_url' => $d->thumbnail_url,
+                        'keterangan' => $d->keterangan ?: '',
+                    ];
+                })->values(),
+                'show_url' => route('laporan.show', $lap),
+                'edit_url' => route('laporan.edit', $lap),
+                'pdf_url' => route('laporan.pdf', $lap) . '?ukuran=a4',
+                'word_url' => route('laporan.word', $lap),
+            ]
+        ];
+    });
+@endphp
+
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Daftar Laporan</h2>
-            <a href="{{ route('laporan.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+            <a href="{{ route('laporan.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 shadow-sm transition">
                 + Buat Laporan
             </a>
         </div>
     </x-slot>
 
-    <div class="py-8">
+    <div class="py-8"
+         x-data="{
+             showModal: false,
+             selected: null,
+             laporans: {{ Js::from($modalData) }},
+             openModal(id) {
+                 this.selected = this.laporans[id] || null;
+                 if (this.selected) {
+                     this.showModal = true;
+                     document.body.style.overflow = 'hidden';
+                 }
+             },
+             closeModal() {
+                 this.showModal = false;
+                 this.selected = null;
+                 document.body.style.overflow = '';
+             }
+         }"
+         @keydown.escape.window="closeModal()">
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
             @if (session('status'))
                 <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
@@ -136,9 +204,11 @@
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                     <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $laporan->id }}</td>
                                     <td class="px-4 py-3">
-                                        <a href="{{ route('laporan.show', $laporan) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                                        <button type="button"
+                                                @click="openModal({{ $laporan->id }})"
+                                                class="font-medium text-left text-indigo-600 dark:text-indigo-400 hover:underline">
                                             {{ $laporan->perihal_laporan }}
-                                        </a>
+                                        </button>
                                     </td>
                                     <td class="px-4 py-3">{{ $laporan->pegawai->nama }}</td>
                                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
@@ -170,7 +240,11 @@
                                     <td class="px-4 py-3 text-center">{{ $laporan->dokumentasis_count }}</td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2 whitespace-nowrap">
-                                            <a href="{{ route('laporan.show', $laporan) }}" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Lihat</a>
+                                            <button type="button"
+                                                    @click="openModal({{ $laporan->id }})"
+                                                    class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
+                                                Lihat
+                                            </button>
                                             <a href="{{ route('laporan.edit', $laporan) }}" class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400">Edit</a>
                                             <form action="{{ route('laporan.duplicate', $laporan) }}" method="POST" onsubmit="return confirm('Duplikat laporan ini?')">
                                                @csrf
@@ -216,6 +290,267 @@
                             </option>
                         @endforeach
                     </select>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===================== MODAL PREVIEW POPUP ===================== --}}
+        <div x-show="showModal"
+             x-cloak
+             class="fixed inset-0 z-50 overflow-y-auto"
+             style="display: none;">
+            
+            {{-- Backdrop --}}
+            <div x-show="showModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="closeModal()"
+                 class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+
+            {{-- Dialog panel --}}
+            <div class="flex min-h-full items-center justify-center p-3 sm:p-4 text-center">
+                <div x-show="showModal"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     @click.stop
+                     class="relative w-full max-w-4xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 text-left align-middle shadow-2xl transition-all border border-gray-100 dark:border-gray-700/80 flex flex-col max-h-[90vh]">
+                    
+                    <template x-if="selected">
+                        <div class="flex flex-col h-full overflow-hidden">
+                            {{-- Modal Header --}}
+                            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700/80 flex items-start justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/40 shrink-0">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 text-xs font-mono font-semibold rounded bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                            Laporan #<span x-text="selected.id"></span>
+                                        </span>
+                                        <span class="text-xs text-gray-400" x-text="selected.tanggal_laporan"></span>
+                                    </div>
+                                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 leading-snug"
+                                        x-text="selected.perihal"></h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1"
+                                       x-text="selected.judul"></p>
+                                </div>
+
+                                <div class="flex items-center gap-2 shrink-0">
+                                    {{-- Tombol Detail di Header --}}
+                                    <a :href="selected.show_url"
+                                       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg shadow-sm transition">
+                                        <span>Detail</span>
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                    </a>
+
+                                    <button type="button"
+                                            @click="closeModal()"
+                                            class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                            title="Tutup (Esc)">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Modal Body (Scrollable) --}}
+                            <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-700 dark:text-gray-300">
+                                {{-- Card Informasi Utama --}}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {{-- Kolom Kiri: Petugas & Tujuan --}}
+                                    <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-4 border border-gray-100 dark:border-gray-700/60 space-y-3">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                            </div>
+                                            <div class="space-y-0.5">
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">Petugas / Pelaksana</div>
+                                                <div class="font-semibold text-gray-900 dark:text-gray-100" x-text="selected.pegawai.nama"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 font-mono" x-text="'NIP: ' + selected.pegawai.nip"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="selected.pegawai.unit_kerja"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="pt-2 border-t border-gray-200/60 dark:border-gray-700/60 text-xs space-y-1">
+                                            <div class="text-gray-500 dark:text-gray-400">Kepada Yth. (Tujuan Surat):</div>
+                                            <div class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.tujuan_surat || '-'"></div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Kolom Kanan: Lokasi & Tanggal --}}
+                                    <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-4 border border-gray-100 dark:border-gray-700/60 space-y-3">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                            </div>
+                                            <div class="space-y-0.5">
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">Lokasi Tujuan Kegiatan</div>
+                                                <div class="font-semibold text-gray-900 dark:text-gray-100" x-text="selected.lokasi_tujuan"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="pt-2 border-t border-gray-200/60 dark:border-gray-700/60 text-xs space-y-1.5">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Tanggal Kegiatan:</span>
+                                                <span class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.tanggal_kegiatan"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Tempat Penandatanganan:</span>
+                                                <span class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.tempat_laporan"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Tanggal Laporan:</span>
+                                                <span class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.tanggal_laporan"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Pembiayaan Kegiatan --}}
+                                <template x-if="selected.pembiayaan">
+                                    <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-4 border border-gray-100 dark:border-gray-700/60">
+                                        <div class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">
+                                            Pembiayaan Kegiatan
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                            <div>
+                                                <span class="text-gray-500 dark:text-gray-400">Program:</span>
+                                                <div class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.pembiayaan.program || '-'"></div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 dark:text-gray-400">Kegiatan:</span>
+                                                <div class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.pembiayaan.kegiatan || '-'"></div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 dark:text-gray-400">RO:</span>
+                                                <div class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.pembiayaan.ro || '-'"></div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 dark:text-gray-400">Komponen:</span>
+                                                <div class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.pembiayaan.komponen || '-'"></div>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500 dark:text-gray-400">Akun:</span>
+                                                <div class="font-medium text-gray-800 dark:text-gray-200" x-text="selected.pembiayaan.akun || '-'"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                {{-- Lampiran 1 — Uraian Kegiatan --}}
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between border-b pb-2 border-gray-200 dark:border-gray-700">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-semibold text-gray-800 dark:text-gray-200">Lampiran 1 — Uraian Kegiatan</span>
+                                            <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                                  x-text="selected.uraians.length + ' item'"></span>
+                                        </div>
+                                    </div>
+
+                                    <template x-if="selected.uraians.length > 0">
+                                        <div class="space-y-3">
+                                            <template x-for="(u, idx) in selected.uraians" :key="idx">
+                                                <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700/60 space-y-2">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                                        <span class="font-semibold text-indigo-600 dark:text-indigo-400" x-text="'Kegiatan #' + (idx + 1)"></span>
+                                                        <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                                            <span x-text="u.tanggal"></span>
+                                                            <span x-show="u.jam" x-text="'• ' + u.jam"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed prose dark:prose-invert max-w-none"
+                                                         x-html="u.html"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="selected.uraians.length === 0">
+                                        <div class="text-xs text-center py-4 text-gray-400 italic">Belum ada uraian kegiatan.</div>
+                                    </template>
+                                </div>
+
+                                {{-- Lampiran 2 — Dokumentasi Foto --}}
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between border-b pb-2 border-gray-200 dark:border-gray-700">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-semibold text-gray-800 dark:text-gray-200">Lampiran 2 — Foto Dokumentasi</span>
+                                            <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                                  x-text="selected.dokumentasis.length + ' foto'"></span>
+                                        </div>
+                                    </div>
+
+                                    <template x-if="selected.dokumentasis.length > 0">
+                                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                            <template x-for="(dok, didx) in selected.dokumentasis" :key="didx">
+                                                <div class="group relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-black/5">
+                                                    <a :href="dok.url" target="_blank" class="block aspect-video overflow-hidden">
+                                                        <img :src="dok.thumb_url"
+                                                             :alt="dok.keterangan || 'Dokumentasi'"
+                                                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                                    </a>
+                                                    <p x-show="dok.keterangan"
+                                                       class="p-1.5 text-[11px] text-gray-600 dark:text-gray-300 truncate"
+                                                       :title="dok.keterangan"
+                                                       x-text="dok.keterangan"></p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="selected.dokumentasis.length === 0">
+                                        <div class="text-xs text-center py-4 text-gray-400 italic">Belum ada foto dokumentasi.</div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Modal Footer --}}
+                            <div class="px-6 py-4 bg-gray-50/70 dark:bg-gray-900/60 border-t border-gray-100 dark:border-gray-700/80 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                                <div class="flex items-center gap-2 w-full sm:w-auto">
+                                    <a :href="selected.pdf_url" target="_blank"
+                                       class="px-3 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition font-medium">
+                                        Cetak PDF
+                                    </a>
+                                    <a :href="selected.word_url"
+                                       class="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium">
+                                        Word (.docx)
+                                    </a>
+                                    <a :href="selected.edit_url"
+                                       class="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition font-medium">
+                                        Edit
+                                    </a>
+                                </div>
+
+                                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                    <button type="button"
+                                            @click="closeModal()"
+                                            class="px-4 py-2 text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                        Tutup
+                                    </button>
+
+                                    {{-- TOMBOL DETAIL UTAMA --}}
+                                    <a :href="selected.show_url"
+                                       class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition">
+                                        <span>Detail</span>
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>

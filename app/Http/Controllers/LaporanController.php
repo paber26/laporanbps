@@ -42,7 +42,8 @@ class LaporanController extends Controller
         $query = Laporan::with([
                 'pegawai',
                 'pembiayaan',
-                'uraians:id,laporan_id,tanggal_kegiatan,urutan',
+                'uraians',
+                'dokumentasis',
             ])
             ->withCount(['uraians', 'dokumentasis'])
             ->latest('id');
