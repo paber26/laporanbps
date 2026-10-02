@@ -48,7 +48,7 @@ class LaporanController extends Controller
         }
 
         // 2. Simpan filter jika ada parameter filter yang dikirimkan, atau pulihkan filter terakhir jika URL tanpa filter
-        $filterKeys = ['search', 'pegawai_id', 'tahun', 'bulan', 'per_page'];
+        $filterKeys = ['search', 'pegawai_id', 'tahun', 'bulan', 'per_page', 'sort', 'direction'];
         $hasAnyFilterParam = $request->hasAny($filterKeys);
 
         if ($hasAnyFilterParam) {
@@ -57,6 +57,12 @@ class LaporanController extends Controller
                 function ($val, $key) {
                     if ($key === 'per_page') {
                         return $val && $val !== '10';
+                    }
+                    if ($key === 'sort') {
+                        return in_array($val, ['tanggal_kegiatan'], true);
+                    }
+                    if ($key === 'direction') {
+                        return in_array(strtolower((string) $val), ['asc', 'desc'], true);
                     }
                     return $val !== null && trim((string) $val) !== '';
                 },
@@ -86,8 +92,7 @@ class LaporanController extends Controller
                 'uraians',
                 'dokumentasis',
             ])
-            ->withCount(['uraians', 'dokumentasis'])
-            ->latest('id');
+            ->withCount(['uraians', 'dokumentasis']);
 
         // Filter pencarian kata kunci
         if ($search = trim((string) $request->input('search'))) {
@@ -129,6 +134,22 @@ class LaporanController extends Controller
                         $uq->whereMonth('tanggal_kegiatan', $bulan);
                     });
             });
+        }
+
+        // Pengurutan (Sorting)
+        $sort = $request->input('sort');
+        $direction = strtolower((string) $request->input('direction', 'desc'));
+        if (! in_array($direction, ['asc', 'desc'], true)) {
+            $direction = 'desc';
+        }
+
+        if ($sort === 'tanggal_kegiatan') {
+            $aggregateFn = $direction === 'asc' ? 'MIN' : 'MAX';
+            $query->orderByRaw(
+                "COALESCE((SELECT {$aggregateFn}(tanggal_kegiatan) FROM laporan_uraians WHERE laporan_uraians.laporan_id = laporans.id), laporans.tanggal_laporan) {$direction}"
+            )->orderBy('laporans.id', $direction);
+        } else {
+            $query->latest('id');
         }
 
         // Jumlah baris per halaman

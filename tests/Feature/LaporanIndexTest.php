@@ -361,5 +361,108 @@ class LaporanIndexTest extends TestCase
         $responsePdf->assertOk();
         $responsePdf->assertHeader('content-type', 'application/pdf');
     }
+
+    public function test_laporan_index_sorts_by_tanggal_kegiatan_asc_and_desc(): void
+    {
+        $user = User::factory()->create();
+
+        $pegawai = Pegawai::create([
+            'nama' => 'Petugas Sort Test',
+            'nip' => '199001012015011002',
+            'jabatan' => 'Statistisi Ahli Pertama',
+            'pangkat_golongan' => 'Penata Muda / III/a',
+            'unit_kerja' => 'BPS Minahasa Selatan',
+        ]);
+
+        // Laporan A: Kegiatan di bulan Agustus (2026-08-20)
+        $lapA = Laporan::create([
+            'pegawai_id' => $pegawai->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Laporan A',
+            'perihal_laporan' => 'Perihal Kegiatan Agustus',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang Barat',
+            'tanggal_laporan' => '2026-08-21',
+            'lokasi_tujuan' => 'Kecamatan Tumpaan',
+        ]);
+        LaporanUraian::create([
+            'laporan_id' => $lapA->id,
+            'tanggal_kegiatan' => '2026-08-20',
+            'uraian_text' => 'Kegiatan Agustus',
+            'urutan' => 1,
+        ]);
+
+        // Laporan B: Kegiatan di bulan Juni (2026-06-15)
+        $lapB = Laporan::create([
+            'pegawai_id' => $pegawai->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Laporan B',
+            'perihal_laporan' => 'Perihal Kegiatan Juni',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang Barat',
+            'tanggal_laporan' => '2026-06-16',
+            'lokasi_tujuan' => 'Kecamatan Motoling',
+        ]);
+        LaporanUraian::create([
+            'laporan_id' => $lapB->id,
+            'tanggal_kegiatan' => '2026-06-15',
+            'uraian_text' => 'Kegiatan Juni',
+            'urutan' => 1,
+        ]);
+
+        // Laporan C: Tanpa uraian, tanggal laporan di bulan Juli (2026-07-10)
+        $lapC = Laporan::create([
+            'pegawai_id' => $pegawai->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Laporan C',
+            'perihal_laporan' => 'Perihal Kegiatan Juli',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang Barat',
+            'tanggal_laporan' => '2026-07-10',
+            'lokasi_tujuan' => 'Kecamatan Sinonsayang',
+        ]);
+
+        // 1. Sort DESC (Tertinggi ke Rendah): Lap A (08-20) -> Lap C (07-10) -> Lap B (06-15)
+        $resDesc = $this->actingAs($user)->get(route('laporan.index', [
+            'sort' => 'tanggal_kegiatan',
+            'direction' => 'desc',
+        ]));
+        $resDesc->assertOk();
+        $resDesc->assertSeeInOrder([
+            'Perihal Kegiatan Agustus',
+            'Perihal Kegiatan Juli',
+            'Perihal Kegiatan Juni',
+        ]);
+        $resDesc->assertSee('Tertinggi');
+        // Next link toggles to asc
+        $resDesc->assertSee('direction=asc');
+
+        // 2. Sort ASC (Terendah ke Tertinggi): Lap B (06-15) -> Lap C (07-10) -> Lap A (08-20)
+        $resAsc = $this->actingAs($user)->get(route('laporan.index', [
+            'sort' => 'tanggal_kegiatan',
+            'direction' => 'asc',
+        ]));
+        $resAsc->assertOk();
+        $resAsc->assertSeeInOrder([
+            'Perihal Kegiatan Juni',
+            'Perihal Kegiatan Juli',
+            'Perihal Kegiatan Agustus',
+        ]);
+        $resAsc->assertSee('Terendah');
+        // Next link toggles to desc
+        $resAsc->assertSee('direction=desc');
+
+        // 3. Returning to clean /laporan restores sort from session
+        $resReturn = $this->actingAs($user)->get(route('laporan.index'));
+        $resReturn->assertRedirect(route('laporan.index', [
+            'sort' => 'tanggal_kegiatan',
+            'direction' => 'asc',
+        ]));
+
+        // 4. Reset sort clears sorting
+        $resReset = $this->actingAs($user)->get(route('laporan.index', ['reset' => 1]));
+        $resReset->assertRedirect(route('laporan.index'));
+        $resReset->assertSessionMissing('laporan_last_filter');
+    }
 }
 

@@ -53,11 +53,16 @@
     if (request('tahun')) $activeFilterCount++;
     if (request('bulan')) $activeFilterCount++;
     if (request('per_page') && request('per_page') != '10') $activeFilterCount++;
+    if (request('sort') === 'tanggal_kegiatan') $activeFilterCount++;
     $hasActiveFilter = $activeFilterCount > 0;
 
     $removeFilterUrl = fn (string $key) => $activeFilterCount <= 1
         ? route('laporan.index', ['reset' => 1])
         : request()->fullUrlWithQuery([$key => null]);
+
+    $removeSortUrl = $activeFilterCount <= 1
+        ? route('laporan.index', ['reset' => 1])
+        : request()->fullUrlWithQuery(['sort' => null, 'direction' => null]);
 @endphp
 
 <x-app-layout>
@@ -177,6 +182,12 @@
                                     <a href="{{ $removeFilterUrl('per_page') }}" class="hover:text-red-500 font-bold">&times;</a>
                                 </span>
                             @endif
+                            @if (request('sort') === 'tanggal_kegiatan')
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                    Urut: {{ request('direction') === 'asc' ? 'Kegiatan (Terendah ke Tertinggi)' : 'Kegiatan (Tertinggi ke Rendah)' }}
+                                    <a href="{{ $removeSortUrl }}" class="hover:text-red-500 font-bold" title="Hapus urutan">&times;</a>
+                                </span>
+                            @endif
 
                             <a href="{{ route('laporan.index', ['reset' => 1]) }}"
                                class="text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium ml-1">
@@ -212,7 +223,36 @@
                                 <th class="px-4 py-3">Perihal</th>
                                 <th class="px-4 py-3">Petugas</th>
                                 <th class="px-4 py-3">Lokasi Tujuan Kegiatan</th>
-                                <th class="px-4 py-3">Tanggal Kegiatan</th>
+                                <th class="px-4 py-3 select-none">
+                                    @php
+                                        $isSortedTanggal = request('sort') === 'tanggal_kegiatan';
+                                        $currentDir = strtolower(request('direction', 'desc'));
+                                        $nextDir = ($isSortedTanggal && $currentDir === 'desc') ? 'asc' : 'desc';
+                                        $sortTanggalUrl = request()->fullUrlWithQuery([
+                                            'sort' => 'tanggal_kegiatan',
+                                            'direction' => $nextDir,
+                                            'page' => 1,
+                                        ]);
+                                    @endphp
+                                    <a href="{{ $sortTanggalUrl }}"
+                                       class="group inline-flex items-center gap-1.5 font-semibold transition-colors duration-150 {{ $isSortedTanggal ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white' }}"
+                                       title="{{ $isSortedTanggal ? ($currentDir === 'asc' ? 'Saat ini: Terendah ke Tertinggi. Klik untuk urutkan Tertinggi ke Rendah' : 'Saat ini: Tertinggi ke Rendah. Klik untuk urutkan Terendah ke Tertinggi') : 'Klik untuk mengurutkan dari nilai tertinggi ke rendah' }}">
+                                        <span>Tanggal Kegiatan</span>
+                                        <span class="inline-flex flex-col items-center justify-center text-[10px] leading-[8px] {{ $isSortedTanggal ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300' }}">
+                                            <svg class="w-2.5 h-2.5 {{ ($isSortedTanggal && $currentDir === 'asc') ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'opacity-40' }}" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                            <svg class="w-2.5 h-2.5 -mt-0.5 {{ ($isSortedTanggal && $currentDir === 'desc') ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'opacity-40' }}" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                        @if ($isSortedTanggal)
+                                            <span class="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                                                {{ $currentDir === 'asc' ? 'Terendah' : 'Tertinggi' }}
+                                            </span>
+                                        @endif
+                                    </a>
+                                </th>
                                 <th class="px-4 py-3">Tempat/Tanggal</th>
                                 <th class="px-4 py-3 text-center">Uraian</th>
                                 <th class="px-4 py-3 text-center">Foto</th>
@@ -608,6 +648,13 @@
 
                             <form method="GET" action="{{ route('laporan.index') }}"
                                   class="flex h-full flex-col bg-white dark:bg-gray-800 shadow-2xl border-l border-gray-200 dark:border-gray-700">
+
+                                @if (request('sort'))
+                                    <input type="hidden" name="sort" value="{{ request('sort') }}">
+                                @endif
+                                @if (request('direction'))
+                                    <input type="hidden" name="direction" value="{{ request('direction') }}">
+                                @endif
 
                                 {{-- Drawer Header --}}
                                 <div class="px-6 py-5 bg-gray-50/90 dark:bg-gray-900/90 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
