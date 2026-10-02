@@ -41,7 +41,9 @@ class LaporanController extends Controller
     {
         // 1. Reset filter eksplisit
         if ($request->has('reset')) {
-            $request->session()->forget('laporan_last_filter');
+            if ($request->hasSession()) {
+                $request->session()->forget('laporan_last_filter');
+            }
             return redirect()->route('laporan.index');
         }
 
@@ -61,14 +63,16 @@ class LaporanController extends Controller
                 ARRAY_FILTER_USE_BOTH
             );
 
-            if (! empty($activeFilters)) {
-                $request->session()->put('laporan_last_filter', $activeFilters);
-            } else {
-                $request->session()->forget('laporan_last_filter');
+            if ($request->hasSession()) {
+                if (! empty($activeFilters)) {
+                    $request->session()->put('laporan_last_filter', $activeFilters);
+                } else {
+                    $request->session()->forget('laporan_last_filter');
+                }
             }
         } else {
             // URL bersih: pulihkan filter terakhir yang tersimpan di session
-            if ($request->session()->has('laporan_last_filter')) {
+            if ($request->hasSession() && $request->session()->has('laporan_last_filter')) {
                 $savedFilters = $request->session()->get('laporan_last_filter');
                 if (is_array($savedFilters) && ! empty($savedFilters)) {
                     return redirect()->route('laporan.index', $savedFilters);
