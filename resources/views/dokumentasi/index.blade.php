@@ -34,7 +34,7 @@
                  'petugas' => $d->laporan?->pegawai?->nama ?? '-',
                  'nip' => $d->laporan?->pegawai?->nip ?? '',
                  'lokasi' => $d->laporan?->lokasi_tujuan ?: ($d->laporan?->tempat_laporan ?? '-'),
-                 'tanggal' => $d->laporan?->tanggal_kegiatan_formatted ?? ($d->laporan?->tanggal_laporan?->translatedFormat('j F Y') ?? '-'),
+                 'tanggal' => $d->laporan?->tanggal_kegiatan_formatted ?? ($d->laporan?->tanggal_laporan?->format('d-m-Y') ?? '-'),
                  'laporan_url' => $d->laporan ? route('laporan.show', $d->laporan) : '#',
              ])) }},
              open(idx) {
@@ -280,7 +280,7 @@
                                         <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        <span>{{ $dok->laporan?->tanggal_kegiatan_formatted ?? ($dok->laporan?->tanggal_laporan?->translatedFormat('j F Y') ?? '-') }}</span>
+                                        <span>{{ $dok->laporan?->tanggal_kegiatan_formatted ?? ($dok->laporan?->tanggal_laporan?->format('d-m-Y') ?? '-') }}</span>
                                     </div>
                                 </div>
 

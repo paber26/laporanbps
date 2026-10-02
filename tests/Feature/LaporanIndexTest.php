@@ -62,8 +62,8 @@ class LaporanIndexTest extends TestCase
         $response->assertSee('Lokasi Tujuan Kegiatan');
         $response->assertSee('Tanggal Kegiatan');
         $response->assertSee('Popontolen');
-        $response->assertSee('28 Juni 2026');
-        $response->assertSee('29 Juni 2026');
+        $response->assertSee('28-06-2026');
+        $response->assertSee('29-06-2026');
     }
 
     public function test_laporan_index_handles_single_date_and_no_uraian(): void
@@ -113,7 +113,7 @@ class LaporanIndexTest extends TestCase
         $response->assertOk();
         $response->assertSee('Tumpaan');
         $response->assertSee('Motoling');
-        $response->assertSee('2 Juli 2026');
+        $response->assertSee('02-07-2026');
     }
 
     public function test_laporan_index_filters_by_search_and_pegawai(): void

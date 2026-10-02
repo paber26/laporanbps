@@ -59,7 +59,7 @@ class DokumentasiTest extends TestCase
         $response->assertSee('Sosialisasi SE2026');
         $response->assertSee('Bernaldo Napitupulu');
         $response->assertSee('Popontolen');
-        $response->assertSee('Lokasi: Popontolen | Tgl: 25 Juni 2026');
+        $response->assertSee('Lokasi: Popontolen | Tgl: 25-06-2026');
     }
 
     public function test_dokumentasi_search_and_filter(): void

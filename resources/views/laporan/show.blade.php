@@ -38,7 +38,7 @@
 
                 <div class="flex justify-between mb-6">
                     <div>Perihal : {{ $laporan->perihal_laporan }}</div>
-                    <div>({{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }})</div>
+                    <div>({{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->format('d-m-Y') }})</div>
                 </div>
 
                 <div class="mb-6">
@@ -99,7 +99,7 @@
                     <tbody>
                         @forelse ($laporan->uraians as $u)
                             <tr>
-                                <td class="border p-2 align-top">{{ $u->tanggal_kegiatan?->translatedFormat('l') }}/{{ $u->tanggal_kegiatan?->translatedFormat('j F Y') }}</td>
+                                <td class="border p-2 align-top">{{ $u->tanggal_kegiatan?->translatedFormat('l') }}/{{ $u->tanggal_kegiatan?->format('d-m-Y') }}</td>
                                 <td class="border p-2 align-top">{{ trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? '')) }}</td>
                                 <td class="border p-2 align-top prose max-w-none">{!! $u->uraian_html !!}</td>
                             </tr>

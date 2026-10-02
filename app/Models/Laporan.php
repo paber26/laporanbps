@@ -78,24 +78,21 @@ class Laporan extends Model
         if ($dates->isEmpty()) {
             if ($this->tanggal_laporan) {
                 $tgl = $this->tanggal_laporan instanceof \Carbon\CarbonInterface
-                    ? $this->tanggal_laporan->copy()->locale('id')
-                    : Carbon::parse($this->tanggal_laporan)->locale('id');
-                return $tgl->translatedFormat('j F Y');
+                    ? $this->tanggal_laporan->copy()
+                    : Carbon::parse($this->tanggal_laporan);
+                return $tgl->format('d-m-Y');
             }
             return '-';
         }
 
         if ($dates->count() === 1) {
-            return $dates[0]->translatedFormat('j F Y');
+            return $dates[0]->format('d-m-Y');
         }
 
         if ($dates->count() === 2) {
-            if ($dates[0]->format('Y-m') === $dates[1]->format('Y-m')) {
-                return $dates[0]->format('j') . ' & ' . $dates[1]->translatedFormat('j F Y');
-            }
-            return $dates[0]->translatedFormat('j M') . ' & ' . $dates[1]->translatedFormat('j F Y');
+            return $dates[0]->format('d-m-Y') . ' & ' . $dates[1]->format('d-m-Y');
         }
 
-        return $dates->first()->translatedFormat('j M') . ' s.d. ' . $dates->last()->translatedFormat('j M Y');
+        return $dates->first()->format('d-m-Y') . ' s.d. ' . $dates->last()->format('d-m-Y');
     }
 }

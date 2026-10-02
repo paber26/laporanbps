@@ -7,7 +7,7 @@
                 'perihal' => $lap->perihal_laporan,
                 'tujuan_surat' => $lap->tujuan_surat,
                 'tempat_laporan' => $lap->tempat_laporan,
-                'tanggal_laporan' => $lap->tanggal_laporan?->translatedFormat('j F Y') ?? '-',
+                'tanggal_laporan' => $lap->tanggal_laporan?->format('d-m-Y') ?? '-',
                 'lokasi_tujuan' => $lap->lokasi_tujuan ?: '-',
                 'tanggal_kegiatan' => $lap->tanggal_kegiatan_formatted,
                 'pegawai' => [
@@ -26,7 +26,7 @@
                 ] : null,
                 'uraians' => $lap->uraians->map(function ($u) {
                     return [
-                        'tanggal' => $u->tanggal_kegiatan ? $u->tanggal_kegiatan->translatedFormat('l, j F Y') : '-',
+                        'tanggal' => $u->tanggal_kegiatan ? $u->tanggal_kegiatan->format('d-m-Y') : '-',
                         'jam' => trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? ' - ' : '') . ($u->jam_selesai ?? '')),
                         'html' => $u->uraian_html,
                     ];
@@ -221,20 +221,20 @@
                                         @if ($tglKegiatan->isEmpty())
                                             <span class="text-gray-400">-</span>
                                         @elseif ($tglKegiatan->count() === 1)
-                                            {{ $tglKegiatan[0]->translatedFormat('j F Y') }}
+                                            {{ $tglKegiatan[0]->format('d-m-Y') }}
                                         @elseif ($tglKegiatan->count() === 2)
-                                            {{ $tglKegiatan[0]->translatedFormat('j F Y') }}<br>
-                                            {{ $tglKegiatan[1]->translatedFormat('j F Y') }}
+                                            {{ $tglKegiatan[0]->format('d-m-Y') }}<br>
+                                            {{ $tglKegiatan[1]->format('d-m-Y') }}
                                         @else
-                                            <span title="{{ $tglKegiatan->map(fn($d) => $d->translatedFormat('j F Y'))->implode(', ') }}">
-                                                {{ $tglKegiatan->first()->translatedFormat('j F Y') }} s.d.<br>
-                                                {{ $tglKegiatan->last()->translatedFormat('j F Y') }}
+                                            <span title="{{ $tglKegiatan->map(fn($d) => $d->format('d-m-Y'))->implode(', ') }}">
+                                                {{ $tglKegiatan->first()->format('d-m-Y') }} s.d.<br>
+                                                {{ $tglKegiatan->last()->format('d-m-Y') }}
                                             </span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                         {{ $laporan->tempat_laporan }},<br>
-                                        {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}
+                                        {{ $laporan->tanggal_laporan?->format('d-m-Y') }}
                                     </td>
                                     <td class="px-4 py-3 text-center">{{ $laporan->uraians_count }}</td>
                                     <td class="px-4 py-3 text-center">{{ $laporan->dokumentasis_count }}</td>
