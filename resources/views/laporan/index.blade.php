@@ -521,17 +521,19 @@
                                     </div>
 
                                     <template x-if="selected.uraians.length > 0">
-                                        <div class="space-y-3">
+                                        <div class="space-y-4">
                                             <template x-for="(u, idx) in selected.uraians" :key="idx">
-                                                <div class="p-3.5 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700/60 space-y-2">
-                                                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                                        <span class="font-semibold text-indigo-600 dark:text-indigo-400" x-text="'Kegiatan #' + (idx + 1)"></span>
-                                                        <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                                <div class="p-5 sm:p-6 rounded-xl bg-gray-50/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 space-y-3"
+                                                     style="padding: 1.25rem 1.5rem;">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-gray-200/80 dark:border-gray-700/80 text-xs">
+                                                        <span class="font-bold text-sm text-indigo-600 dark:text-indigo-400" x-text="'Kegiatan #' + (idx + 1)"></span>
+                                                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 font-medium">
                                                             <span x-text="u.tanggal"></span>
                                                             <span x-show="u.jam" x-text="'• ' + u.jam"></span>
                                                         </div>
                                                     </div>
-                                                    <div class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed prose dark:prose-invert max-w-none"
+                                                    <div class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-none space-y-2 [&>p]:mb-2.5 last:[&>p]:mb-0"
+                                                         style="line-height: 1.65;"
                                                          x-html="u.html"></div>
                                                 </div>
                                             </template>
