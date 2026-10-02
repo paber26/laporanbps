@@ -281,4 +281,44 @@ class LaporanIndexTest extends TestCase
         $resFilter->assertOk();
         $resFilter->assertSee('Reset Semua');
     }
+
+    public function test_laporan_index_persists_last_filter_in_session_and_restores_on_return(): void
+    {
+        $user = User::factory()->create();
+
+        // 1. Visit with a filter (search + tahun)
+        $resFilter = $this->actingAs($user)->get(route('laporan.index', [
+            'search' => 'monitoring',
+            'tahun' => '2026',
+        ]));
+        $resFilter->assertOk();
+        $resFilter->assertSessionHas('laporan_last_filter', [
+            'search' => 'monitoring',
+            'tahun' => '2026',
+        ]);
+
+        // 2. Return to /laporan without query string: should redirect to restore saved filter
+        $resReturn = $this->actingAs($user)->get(route('laporan.index'));
+        $resReturn->assertRedirect(route('laporan.index', [
+            'search' => 'monitoring',
+            'tahun' => '2026',
+        ]));
+
+        // 3. Follow redirect: renders properly
+        $resFollowed = $this->actingAs($user)->get(route('laporan.index', [
+            'search' => 'monitoring',
+            'tahun' => '2026',
+        ]));
+        $resFollowed->assertOk();
+        $resFollowed->assertSee('monitoring');
+
+        // 4. Click Reset Semua (reset=1): clears session and redirects to clean /laporan
+        $resReset = $this->actingAs($user)->get(route('laporan.index', ['reset' => 1]));
+        $resReset->assertRedirect(route('laporan.index'));
+        $resReset->assertSessionMissing('laporan_last_filter');
+
+        // 5. Subsequent clean visit to /laporan stays clean without redirect
+        $resClean = $this->actingAs($user)->get(route('laporan.index'));
+        $resClean->assertOk();
+    }
 }

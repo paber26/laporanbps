@@ -54,6 +54,10 @@
     if (request('bulan')) $activeFilterCount++;
     if (request('per_page') && request('per_page') != '10') $activeFilterCount++;
     $hasActiveFilter = $activeFilterCount > 0;
+
+    $removeFilterUrl = fn (string $key) => $activeFilterCount <= 1
+        ? route('laporan.index', ['reset' => 1])
+        : request()->fullUrlWithQuery([$key => null]);
 @endphp
 
 <x-app-layout>
@@ -142,7 +146,7 @@
                             @if (request('search'))
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                     "{{ Str::limit(request('search'), 20) }}"
-                                    <a href="{{ request()->fullUrlWithQuery(['search' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                    <a href="{{ $removeFilterUrl('search') }}" class="hover:text-red-500 font-bold">&times;</a>
                                 </span>
                             @endif
                             @if (request('pegawai_id'))
@@ -150,31 +154,31 @@
                                 @if ($pNama)
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                         {{ Str::limit($pNama, 20) }}
-                                        <a href="{{ request()->fullUrlWithQuery(['pegawai_id' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                        <a href="{{ $removeFilterUrl('pegawai_id') }}" class="hover:text-red-500 font-bold">&times;</a>
                                     </span>
                                 @endif
                             @endif
                             @if (request('tahun'))
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                     Tahun: {{ request('tahun') }}
-                                    <a href="{{ request()->fullUrlWithQuery(['tahun' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                    <a href="{{ $removeFilterUrl('tahun') }}" class="hover:text-red-500 font-bold">&times;</a>
                                 </span>
                             @endif
                             @if (request('bulan'))
                                 @php $bNama = $bulans[(int)request('bulan')] ?? request('bulan'); @endphp
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                     Bulan: {{ $bNama }}
-                                    <a href="{{ request()->fullUrlWithQuery(['bulan' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                    <a href="{{ $removeFilterUrl('bulan') }}" class="hover:text-red-500 font-bold">&times;</a>
                                 </span>
                             @endif
                             @if (request('per_page') && request('per_page') != '10')
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                                     {{ request('per_page') == 'all' ? 'Semua Baris' : request('per_page') . ' Baris' }}
-                                    <a href="{{ request()->fullUrlWithQuery(['per_page' => null]) }}" class="hover:text-red-500 font-bold">&times;</a>
+                                    <a href="{{ $removeFilterUrl('per_page') }}" class="hover:text-red-500 font-bold">&times;</a>
                                 </span>
                             @endif
 
-                            <a href="{{ route('laporan.index') }}"
+                            <a href="{{ route('laporan.index', ['reset' => 1]) }}"
                                class="text-xs text-rose-600 dark:text-rose-400 hover:underline font-medium ml-1">
                                 Reset Semua
                             </a>
@@ -721,7 +725,7 @@
                                 {{-- Drawer Footer --}}
                                 <div class="px-6 py-4 bg-gray-50/90 dark:bg-gray-900/90 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 shrink-0">
                                     @if ($hasActiveFilter)
-                                        <a href="{{ route('laporan.index') }}"
+                                        <a href="{{ route('laporan.index', ['reset' => 1]) }}"
                                            class="px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:underline">
                                             Reset Semua
                                         </a>

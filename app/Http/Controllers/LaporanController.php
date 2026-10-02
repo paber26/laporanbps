@@ -37,8 +37,45 @@ class LaporanController extends Controller
     /**
      * Daftar laporan.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        // 1. Reset filter eksplisit
+        if ($request->has('reset')) {
+            $request->session()->forget('laporan_last_filter');
+            return redirect()->route('laporan.index');
+        }
+
+        // 2. Simpan filter jika ada parameter filter yang dikirimkan, atau pulihkan filter terakhir jika URL tanpa filter
+        $filterKeys = ['search', 'pegawai_id', 'tahun', 'bulan', 'per_page'];
+        $hasAnyFilterParam = $request->hasAny($filterKeys);
+
+        if ($hasAnyFilterParam) {
+            $activeFilters = array_filter(
+                $request->only($filterKeys),
+                function ($val, $key) {
+                    if ($key === 'per_page') {
+                        return $val && $val !== '10';
+                    }
+                    return $val !== null && trim((string) $val) !== '';
+                },
+                ARRAY_FILTER_USE_BOTH
+            );
+
+            if (! empty($activeFilters)) {
+                $request->session()->put('laporan_last_filter', $activeFilters);
+            } else {
+                $request->session()->forget('laporan_last_filter');
+            }
+        } else {
+            // URL bersih: pulihkan filter terakhir yang tersimpan di session
+            if ($request->session()->has('laporan_last_filter')) {
+                $savedFilters = $request->session()->get('laporan_last_filter');
+                if (is_array($savedFilters) && ! empty($savedFilters)) {
+                    return redirect()->route('laporan.index', $savedFilters);
+                }
+            }
+        }
+
         $query = Laporan::with([
                 'pegawai',
                 'pembiayaan',
