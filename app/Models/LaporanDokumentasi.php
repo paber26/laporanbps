@@ -59,22 +59,26 @@ class LaporanDokumentasi extends Model
      */
     public function getThumbnailUrlAttribute(): string
     {
-        $thumbRelative = $this->thumbnail_path;
-        $disk = Storage::disk('public');
+        try {
+            $thumbRelative = $this->thumbnail_path;
+            $disk = Storage::disk('public');
 
-        if ($disk->exists($thumbRelative)) {
-            return Storage::url($thumbRelative);
-        }
-
-        // Buat on-the-fly bila berkas gambar asli tersedia
-        if ($this->image_path && $disk->exists($this->image_path)) {
-            if (\App\Support\ImageCompressor::createThumbnail($this->image_path, $thumbRelative)) {
+            if ($disk->exists($thumbRelative)) {
                 return Storage::url($thumbRelative);
             }
-        }
 
-        // Fallback ke route thumbnail atau URL asli jika GD belum selesai
-        return route('dokumentasi.thumb', $this);
+            // Buat on-the-fly bila berkas gambar asli tersedia
+            if ($this->image_path && $disk->exists($this->image_path)) {
+                if (\App\Support\ImageCompressor::createThumbnail($this->image_path, $thumbRelative)) {
+                    return Storage::url($thumbRelative);
+                }
+            }
+
+            // Fallback ke gambar asli jika kompresi belum siap
+            return $this->url;
+        } catch (\Throwable $e) {
+            return $this->url;
+        }
     }
 
     /**
