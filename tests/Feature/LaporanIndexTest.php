@@ -115,4 +115,103 @@ class LaporanIndexTest extends TestCase
         $response->assertSee('Motoling');
         $response->assertSee('2 Juli 2026');
     }
+
+    public function test_laporan_index_filters_by_search_and_pegawai(): void
+    {
+        $user = User::factory()->create();
+
+        $pegawaiA = Pegawai::create([
+            'nama' => 'Petugas Pertama',
+            'nip' => '123456789012345671',
+            'jabatan' => 'Statistisi',
+            'pangkat_golongan' => 'III/a',
+            'unit_kerja' => 'BPS',
+        ]);
+
+        $pegawaiB = Pegawai::create([
+            'nama' => 'Petugas Kedua',
+            'nip' => '123456789012345672',
+            'jabatan' => 'Statistisi',
+            'pangkat_golongan' => 'III/a',
+            'unit_kerja' => 'BPS',
+        ]);
+
+        Laporan::create([
+            'pegawai_id' => $pegawaiA->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Judul Alpha',
+            'perihal_laporan' => 'Kegiatan Sensus Khusus',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang',
+            'tanggal_laporan' => '2026-06-10',
+            'lokasi_tujuan' => 'Desa Popontolen',
+        ]);
+
+        Laporan::create([
+            'pegawai_id' => $pegawaiB->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Judul Beta',
+            'perihal_laporan' => 'Pencacahan Survei Rutin',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang',
+            'tanggal_laporan' => '2026-07-20',
+            'lokasi_tujuan' => 'Desa Modoinding',
+        ]);
+
+        // Filter search "Khusus"
+        $resSearch = $this->actingAs($user)->get(route('laporan.index', ['search' => 'Khusus']));
+        $resSearch->assertOk();
+        $resSearch->assertSee('Kegiatan Sensus Khusus');
+        $resSearch->assertDontSee('Pencacahan Survei Rutin');
+
+        // Filter pegawai B
+        $resPegawai = $this->actingAs($user)->get(route('laporan.index', ['pegawai_id' => $pegawaiB->id]));
+        $resPegawai->assertOk();
+        $resPegawai->assertSee('Pencacahan Survei Rutin');
+        $resPegawai->assertDontSee('Kegiatan Sensus Khusus');
+    }
+
+    public function test_laporan_index_supports_per_page_selection(): void
+    {
+        $user = User::factory()->create();
+
+        $pegawai = Pegawai::create([
+            'nama' => 'Petugas Batch',
+            'nip' => '123456789012345679',
+            'jabatan' => 'Statistisi',
+            'pangkat_golongan' => 'III/a',
+            'unit_kerja' => 'BPS',
+        ]);
+
+        for ($i = 1; $i <= 15; $i++) {
+            Laporan::create([
+                'pegawai_id' => $pegawai->id,
+                'pembiayaan_id' => null,
+                'judul_laporan' => "Judul {$i}",
+                'perihal_laporan' => "Laporan Unik Nomor {$i}",
+                'tujuan_surat' => 'Kepala BPS',
+                'tempat_laporan' => 'Amurang',
+                'tanggal_laporan' => '2026-08-01',
+                'lokasi_tujuan' => 'Lokasi Test',
+            ]);
+        }
+
+        // Default 10 rows: Page 1 should see Nomor 15 to Nomor 6, but not Nomor 5
+        $res10 = $this->actingAs($user)->get(route('laporan.index', ['per_page' => '10']));
+        $res10->assertOk();
+        $res10->assertSee('Laporan Unik Nomor 15');
+        $res10->assertDontSee('Laporan Unik Nomor 5');
+
+        // 25 rows: should see all 15 reports on page 1
+        $res25 = $this->actingAs($user)->get(route('laporan.index', ['per_page' => '25']));
+        $res25->assertOk();
+        $res25->assertSee('Laporan Unik Nomor 15');
+        $res25->assertSee('Laporan Unik Nomor 1');
+
+        // 'all' rows: should see all 15 reports
+        $resAll = $this->actingAs($user)->get(route('laporan.index', ['per_page' => 'all']));
+        $resAll->assertOk();
+        $resAll->assertSee('Laporan Unik Nomor 15');
+        $resAll->assertSee('Laporan Unik Nomor 1');
+    }
 }

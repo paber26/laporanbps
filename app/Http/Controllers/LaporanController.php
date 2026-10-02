@@ -37,18 +37,109 @@ class LaporanController extends Controller
     /**
      * Daftar laporan.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $laporans = Laporan::with([
+        $query = Laporan::with([
                 'pegawai',
                 'pembiayaan',
                 'uraians:id,laporan_id,tanggal_kegiatan,urutan',
             ])
             ->withCount(['uraians', 'dokumentasis'])
-            ->latest()
-            ->paginate(10);
+            ->latest('id');
 
-        return view('laporan.index', compact('laporans'));
+        // Filter pencarian kata kunci
+        if ($search = trim((string) $request->input('search'))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('perihal_laporan', 'like', "%{$search}%")
+                    ->orWhere('judul_laporan', 'like', "%{$search}%")
+                    ->orWhere('lokasi_tujuan', 'like', "%{$search}%")
+                    ->orWhere('tempat_laporan', 'like', "%{$search}%")
+                    ->orWhereHas('pegawai', function ($pq) use ($search) {
+                        $pq->where('nama', 'like', "%{$search}%")
+                            ->orWhere('nip', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('uraians', function ($uq) use ($search) {
+                        $uq->where('uraian_text', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Filter berdasarkan pegawai tertentu
+        if ($pegawaiId = $request->input('pegawai_id')) {
+            $query->where('pegawai_id', $pegawaiId);
+        }
+
+        // Filter tahun (berdasarkan tanggal laporan atau tanggal kegiatan uraian)
+        if ($tahun = $request->input('tahun')) {
+            $query->where(function ($q) use ($tahun) {
+                $q->whereYear('tanggal_laporan', $tahun)
+                    ->orWhereHas('uraians', function ($uq) use ($tahun) {
+                        $uq->whereYear('tanggal_kegiatan', $tahun);
+                    });
+            });
+        }
+
+        // Filter bulan (berdasarkan tanggal laporan atau tanggal kegiatan uraian)
+        if ($bulan = $request->input('bulan')) {
+            $query->where(function ($q) use ($bulan) {
+                $q->whereMonth('tanggal_laporan', $bulan)
+                    ->orWhereHas('uraians', function ($uq) use ($bulan) {
+                        $uq->whereMonth('tanggal_kegiatan', $bulan);
+                    });
+            });
+        }
+
+        // Jumlah baris per halaman
+        $perPageInput = $request->input('per_page', '10');
+        if ($perPageInput === 'all') {
+            $perPage = 500;
+        } else {
+            $perPage = (int) $perPageInput;
+            if (! in_array($perPage, [10, 25, 50, 100], true)) {
+                $perPage = 10;
+            }
+        }
+
+        $laporans = $query->paginate($perPage)->withQueryString();
+
+        // Opsi untuk filter dropdown
+        $pegawais = Pegawai::orderBy('nama')->get(['id', 'nama', 'nip']);
+
+        $tahuns = Laporan::pluck('tanggal_laporan')
+            ->filter()
+            ->map(function ($d) {
+                return $d instanceof \Carbon\CarbonInterface ? $d->year : \Carbon\Carbon::parse($d)->year;
+            })
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        if ($tahuns->isEmpty()) {
+            $tahuns = collect([now()->year]);
+        }
+
+        $bulans = [
+            1 => 'Januari',
+            2 => 'Februari',
+            3 => 'Maret',
+            4 => 'April',
+            5 => 'Mei',
+            6 => 'Juni',
+            7 => 'Juli',
+            8 => 'Agustus',
+            9 => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
+        ];
+
+        return view('laporan.index', compact(
+            'laporans',
+            'pegawais',
+            'tahuns',
+            'bulans',
+            'perPageInput'
+        ));
     }
 
     /**

@@ -14,6 +14,107 @@
                 <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
             @endif
 
+            {{-- ===================== TOOLBAR FILTER & PENCARIAN ===================== --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700/60">
+                <form method="GET" action="{{ route('laporan.index') }}" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        {{-- Cari kata kunci --}}
+                        <div class="md:col-span-4">
+                            <label for="search" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Cari Kata Kunci</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </span>
+                                <input type="text" id="search" name="search" value="{{ request('search') }}"
+                                       placeholder="Perihal, lokasi, judul, petugas, uraian..."
+                                       class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                            </div>
+                        </div>
+
+                        {{-- Filter Petugas --}}
+                        <div class="md:col-span-3">
+                            <label for="pegawai_id" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Petugas</label>
+                            <select id="pegawai_id" name="pegawai_id"
+                                    class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                <option value="">Semua Petugas</option>
+                                @foreach ($pegawais as $p)
+                                    <option value="{{ $p->id }}" @selected(request('pegawai_id') == $p->id)>
+                                        {{ $p->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Filter Tahun --}}
+                        <div class="md:col-span-2">
+                            <label for="tahun" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Tahun</label>
+                            <select id="tahun" name="tahun"
+                                    class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                <option value="">Semua Tahun</option>
+                                @foreach ($tahuns as $thn)
+                                    <option value="{{ $thn }}" @selected(request('tahun') == $thn)>
+                                        {{ $thn }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Filter Bulan --}}
+                        <div class="md:col-span-2">
+                            <label for="bulan" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Bulan</label>
+                            <select id="bulan" name="bulan"
+                                    class="w-full py-2 px-3 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                <option value="">Semua Bulan</option>
+                                @foreach ($bulans as $num => $namaBulan)
+                                    <option value="{{ $num }}" @selected(request('bulan') == $num)>
+                                        {{ $namaBulan }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Pilihan Jumlah Baris --}}
+                        <div class="md:col-span-1">
+                            <label for="per_page" class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-nowrap">Baris</label>
+                            <select id="per_page" name="per_page" onchange="this.form.submit()"
+                                    title="Pilih jumlah baris yang ditampilkan per halaman"
+                                    class="w-full py-2 px-2 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring focus:ring-indigo-200 dark:focus:ring-indigo-800/40">
+                                <option value="10" @selected(request('per_page', '10') == '10')>10</option>
+                                <option value="25" @selected(request('per_page') == '25')>25</option>
+                                <option value="50" @selected(request('per_page') == '50')>50</option>
+                                <option value="100" @selected(request('per_page') == '100')>100</option>
+                                <option value="all" @selected(request('per_page') == 'all')>Semua</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            Menampilkan <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->firstItem() ?? 0 }}</span>
+                            - <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->lastItem() ?? 0 }}</span>
+                            dari <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $laporans->total() }}</span> laporan
+                            @if (request()->hasAny(['search', 'pegawai_id', 'tahun', 'bulan']) && (request('search') || request('pegawai_id') || request('tahun') || request('bulan')))
+                                <span class="ml-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                    Hasil Filter
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if (request()->hasAny(['search', 'pegawai_id', 'tahun', 'bulan', 'per_page']) && (request('search') || request('pegawai_id') || request('tahun') || request('bulan') || (request('per_page') && request('per_page') != '10')))
+                                <a href="{{ route('laporan.index') }}" class="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:underline">
+                                    Reset Filter
+                                </a>
+                            @endif
+                            <button type="submit" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg shadow-sm transition">
+                                Terapkan Filter
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -85,7 +186,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Belum ada laporan. Silakan buat laporan baru.</td>
+                                    <td colspan="9" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        @if (request()->hasAny(['search', 'pegawai_id', 'tahun', 'bulan']) && (request('search') || request('pegawai_id') || request('tahun') || request('bulan')))
+                                            Tidak ada laporan yang sesuai dengan filter pencarian.
+                                            <a href="{{ route('laporan.index') }}" class="text-indigo-600 dark:text-indigo-400 underline ml-1">Reset filter</a>
+                                        @else
+                                            Belum ada laporan. Silakan buat laporan baru.
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -93,7 +201,23 @@
                 </div>
             </div>
 
-            <div>{{ $laporans->links() }}</div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+                <div>
+                    {{ $laporans->links() }}
+                </div>
+                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 self-end sm:self-auto">
+                    <span>Tampilkan per halaman:</span>
+                    <select onchange="window.location.href = this.value"
+                            class="py-1 px-2.5 text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 focus:ring-indigo-500">
+                        @foreach (['10' => '10 baris', '25' => '25 baris', '50' => '50 baris', '100' => '100 baris', 'all' => 'Semua'] as $val => $lbl)
+                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $val, 'page' => 1]) }}"
+                                    @selected(request('per_page', '10') == $val)>
+                                {{ $lbl }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>
