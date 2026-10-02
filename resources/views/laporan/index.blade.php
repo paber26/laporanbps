@@ -41,7 +41,7 @@
                 })->values(),
                 'show_url' => route('laporan.show', $lap),
                 'edit_url' => route('laporan.edit', $lap),
-                'pdf_url' => route('laporan.pdf', $lap) . '?ukuran=a4',
+                'pdf_url' => route('laporan.pdf', $lap) . '?ukuran=f4',
                 'word_url' => route('laporan.word', $lap),
             ]
         ];

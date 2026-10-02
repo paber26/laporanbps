@@ -335,7 +335,7 @@ class LaporanController extends Controller
     {
         $laporan->load(['pegawai', 'pembiayaan', 'uraians', 'dokumentasis']);
 
-        $ukuran = strtolower($request->query('ukuran', 'a4'));
+        $ukuran = strtolower($request->query('ukuran', 'f4'));
         $paper = $this->paperSize($ukuran);
 
         $pdf = Pdf::loadView('laporan.pdf-template', compact('laporan'))

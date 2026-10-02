@@ -21,12 +21,12 @@
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cetak Dokumen:</span>
                 <label class="text-sm text-gray-600 dark:text-gray-400">Ukuran Kertas
                     <select id="ukuran-kertas" class="ml-1 border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md text-sm">
+                        <option value="f4" selected>F4 / Folio</option>
                         <option value="a4">A4</option>
-                        <option value="f4">F4 / Folio</option>
                         <option value="legal">Legal</option>
                     </select>
                 </label>
-                <a id="btn-pdf" href="{{ route('laporan.pdf', $laporan) }}?ukuran=a4" target="_blank"
+                <a id="btn-pdf" href="{{ route('laporan.pdf', $laporan) }}?ukuran=f4" target="_blank"
                    class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
                 <a href="{{ route('laporan.word', $laporan) }}"
                    class="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Cetak Word (.docx)</a>

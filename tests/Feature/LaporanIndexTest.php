@@ -321,4 +321,45 @@ class LaporanIndexTest extends TestCase
         $resClean = $this->actingAs($user)->get(route('laporan.index'));
         $resClean->assertOk();
     }
+
+    public function test_laporan_pdf_and_links_default_to_f4_paper_size(): void
+    {
+        $user = User::factory()->create();
+
+        $pegawai = Pegawai::create([
+            'nama' => 'Budi Santoso',
+            'nip' => '198701012010011001',
+            'jabatan' => 'Pranata Komputer',
+            'pangkat_golongan' => 'Penata / III/c',
+            'unit_kerja' => 'BPS Kabupaten Minahasa Selatan',
+        ]);
+
+        $laporan = Laporan::create([
+            'pegawai_id' => $pegawai->id,
+            'pembiayaan_id' => null,
+            'judul_laporan' => 'Laporan Supervisi',
+            'perihal_laporan' => 'Supervisi Sensus Ekonomi 2026',
+            'tujuan_surat' => 'Kepala BPS',
+            'tempat_laporan' => 'Amurang Barat',
+            'tanggal_laporan' => '2026-06-29',
+            'lokasi_tujuan' => 'Popontolen',
+        ]);
+
+        // 1. Show page renders default F4 in select and button
+        $responseShow = $this->actingAs($user)->get(route('laporan.show', $laporan));
+        $responseShow->assertOk();
+        $responseShow->assertSee('<option value="f4" selected>F4 / Folio</option>', false);
+        $responseShow->assertSee(route('laporan.pdf', $laporan).'?ukuran=f4', false);
+
+        // 2. Index page renders pdf_url with f4 in modal data
+        $responseIndex = $this->actingAs($user)->get(route('laporan.index'));
+        $responseIndex->assertOk();
+        $responseIndex->assertSee('pdf?ukuran=f4', false);
+
+        // 3. Export PDF defaults to F4 successfully
+        $responsePdf = $this->actingAs($user)->get(route('laporan.pdf', $laporan));
+        $responsePdf->assertOk();
+        $responsePdf->assertHeader('content-type', 'application/pdf');
+    }
 }
+
