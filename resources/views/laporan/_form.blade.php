@@ -370,6 +370,61 @@
         } catch (e) { /* abaikan */ }
     }
 
+    // ====== Kompres & perkecil gambar di browser sebelum diunggah ======
+    // Foto kamera/HP bisa 5-10MB dan melebihi batas unggah server, menyebabkan
+    // "The file failed to upload.". Di sini gambar diperkecil (sisi terpanjang
+    // maks DOK_MAX_DIM) lalu di-encode ulang ke JPEG hingga < DOK_TARGET_BYTES,
+    // sehingga aman diunggah dan tetap tajam untuk laporan/cetak.
+    const DOK_MAX_DIM = 2560;                        // sisi terpanjang maksimum (px)
+    const DOK_TARGET_BYTES = 1.8 * 1024 * 1024;      // target hasil < ~1.8MB
+    const DOK_COMPRESS_IF_OVER = 1.8 * 1024 * 1024;  // di atas ini baru dikompres
+
+    function canvasToBlob(canvas, quality) {
+        return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+    }
+
+    async function compressImage(file) {
+        try {
+            // Sudah cukup kecil → biarkan apa adanya (jaga kualitas asli).
+            if (!file || (file.size && file.size <= DOK_COMPRESS_IF_OVER)) return file;
+
+            let bitmap;
+            try {
+                // imageOrientation 'from-image' menghormati rotasi EXIF (foto HP portrait).
+                bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+            } catch (_) {
+                // Browser tak bisa decode (mis. HEIC di Chrome) → unggah apa adanya.
+                return file;
+            }
+
+            const scale = Math.min(1, DOK_MAX_DIM / Math.max(bitmap.width, bitmap.height));
+            const w = Math.max(1, Math.round(bitmap.width * scale));
+            const h = Math.max(1, Math.round(bitmap.height * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';           // latar putih untuk PNG transparan (hindari hitam)
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(bitmap, 0, 0, w, h);
+            if (bitmap.close) bitmap.close();
+
+            let quality = 0.82;
+            let blob = await canvasToBlob(canvas, quality);
+            while (blob && blob.size > DOK_TARGET_BYTES && quality > 0.4) {
+                quality -= 0.12;
+                blob = await canvasToBlob(canvas, quality);
+            }
+            if (!blob || blob.size >= file.size) return file; // tak membantu → pakai asli
+
+            const base = (file.name || 'foto').replace(/\.[^.]+$/, '');
+            return new File([blob], base + '.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+        } catch (e) {
+            console.warn('Kompresi gambar gagal, unggah file asli:', e);
+            return file;
+        }
+    }
+
     async function uploadFileToRow(row, file) {
         if (!row || !file) return;
 
@@ -377,8 +432,9 @@
         if (row.dataset.path) deleteServerFile(row.dataset.path);
 
         toggleUploading(row, true);
+        const toSend = await compressImage(file);
         const fd = new FormData();
-        fd.append('file', file);
+        fd.append('file', toSend);
         fd.append('_token', CSRF);
         try {
             const res = await fetch(UPLOAD_URL, {
