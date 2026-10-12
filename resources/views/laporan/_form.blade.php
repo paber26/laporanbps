@@ -194,11 +194,16 @@
 
         @if ($isEdit && $laporan->dokumentasis->count())
             <div class="mb-4">
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Foto yang sudah ada</p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-300">Foto yang sudah ada</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Seret foto untuk mengatur urutan.</p>
+                </div>
+                <div id="existing-dok-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
                     @foreach ($laporan->dokumentasis as $dok)
-                        <label class="border rounded-lg p-2 block cursor-pointer">
-                            <img src="{{ $dok->url }}" class="w-full h-28 object-cover rounded" alt="dokumentasi">
+                        <label class="existing-dok-item relative border rounded-lg p-2 block cursor-move select-none" draggable="true" data-dok-id="{{ $dok->id }}">
+                            <input type="hidden" name="dokumentasi_urutan[]" value="{{ $dok->id }}">
+                            <span class="dok-order-badge absolute top-1 left-1 z-10 inline-flex items-center justify-center h-6 w-6 rounded-full bg-indigo-600 text-white text-xs font-semibold shadow">{{ $loop->iteration }}</span>
+                            <img src="{{ $dok->url }}" class="w-full h-28 object-cover rounded pointer-events-none" alt="dokumentasi" draggable="false">
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ $dok->keterangan }}</p>
                             <span class="mt-1 inline-flex items-center gap-1 text-xs text-rose-600">
                                 <input type="checkbox" name="hapus_dokumentasi[]" value="{{ $dok->id }}"> Hapus
@@ -879,5 +884,78 @@
         }, false);
     }
 
+})();
+</script>
+
+{{-- ===================== DRAG & DROP URUTAN FOTO DOKUMENTASI ===================== --}}
+{{-- Memindahkan kartu foto yang sudah ada untuk mengatur urutannya. Urutan baru
+     dibawa lewat input hidden "dokumentasi_urutan[]" di tiap kartu (mengikuti
+     urutan DOM) dan disimpan ke kolom "urutan" saat laporan diperbarui. --}}
+<script>
+(function () {
+    const grid = document.getElementById('existing-dok-grid');
+    if (!grid) return;
+
+    let dragEl = null;
+
+    const items = () => [...grid.querySelectorAll('.existing-dok-item')];
+
+    // Perbarui nomor urut pada badge agar sesuai posisi terbaru.
+    function refreshBadges() {
+        items().forEach((el, i) => {
+            const badge = el.querySelector('.dok-order-badge');
+            if (badge) badge.textContent = i + 1;
+        });
+    }
+
+    // Kartu (selain yang sedang diseret) yang pusatnya paling dekat ke kursor.
+    function nearestItem(x, y) {
+        let best = null, bestDist = Infinity;
+        items().forEach(el => {
+            if (el === dragEl) return;
+            const box = el.getBoundingClientRect();
+            const dx = x - (box.left + box.width / 2);
+            const dy = y - (box.top + box.height / 2);
+            const dist = Math.hypot(dx, dy);
+            if (dist < bestDist) { bestDist = dist; best = el; }
+        });
+        return best;
+    }
+
+    grid.addEventListener('dragstart', e => {
+        const item = e.target.closest('.existing-dok-item');
+        if (!item) return;
+        dragEl = item;
+        item.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+        // Sebagian browser butuh data agar operasi drag berjalan.
+        try { e.dataTransfer.setData('text/plain', item.dataset.dokId || ''); } catch (_) {}
+    });
+
+    grid.addEventListener('dragend', () => {
+        if (dragEl) dragEl.style.opacity = '';
+        dragEl = null;
+        refreshBadges();
+    });
+
+    grid.addEventListener('dragover', e => {
+        if (!dragEl) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const target = nearestItem(e.clientX, e.clientY);
+        if (!target || target === dragEl) return;
+        const box = target.getBoundingClientRect();
+        const midX = box.left + box.width / 2;
+        const midY = box.top + box.height / 2;
+        // Sisipkan sebelum target bila kursor di paruh atas, atau di baris yang
+        // sama namun di sisi kiri target; selain itu sisipkan sesudahnya.
+        const before = e.clientY < midY || (e.clientY < box.bottom && e.clientX < midX);
+        grid.insertBefore(dragEl, before ? target : target.nextSibling);
+    });
+
+    grid.addEventListener('drop', e => {
+        e.preventDefault();
+        refreshBadges();
+    });
 })();
 </script>

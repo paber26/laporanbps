@@ -278,8 +278,10 @@ class LaporanController extends Controller
             $laporan->uraians()->delete();
             $this->syncUraians($request, $laporan);
 
-            // Dokumentasi: hapus yang ditandai, tambah yang baru.
+            // Dokumentasi: hapus yang ditandai, atur ulang urutan yang sudah ada,
+            // lalu tambah foto baru (menyambung di urutan paling akhir).
             $this->deleteMarkedDokumentasi($request, $laporan);
+            $this->reorderDokumentasi($request, $laporan);
             $this->storeDokumentasi($request, $laporan);
         });
 
@@ -530,6 +532,10 @@ class LaporanController extends Controller
             'dokumentasi.*.file' => ['nullable', 'file', 'max:5120'],
             'dokumentasi.*.path' => ['nullable', 'string', 'max:255'],
             'dokumentasi.*.keterangan' => ['nullable', 'string', 'max:255'],
+
+            // Urutan foto dokumentasi yang sudah ada (daftar id sesuai posisi baru).
+            'dokumentasi_urutan' => ['nullable', 'array'],
+            'dokumentasi_urutan.*' => ['nullable', 'integer'],
         ]);
     }
 
@@ -624,6 +630,29 @@ class LaporanController extends Controller
             ]);
 
             \App\Support\ImageCompressor::createThumbnail($path, $createdDok->thumbnail_path);
+        }
+    }
+
+    /**
+     * Atur ulang urutan foto dokumentasi yang sudah ada berdasarkan susunan
+     * drag & drop dari form (daftar id pada "dokumentasi_urutan" sesuai posisi).
+     */
+    protected function reorderDokumentasi(Request $request, Laporan $laporan): void
+    {
+        $order = $request->input('dokumentasi_urutan', []);
+        if (empty($order)) {
+            return;
+        }
+
+        // Hanya id milik laporan ini (abaikan yang sudah dihapus/asing).
+        $validIds = $laporan->dokumentasis()->pluck('id')->all();
+
+        $posisi = 0;
+        foreach ($order as $id) {
+            $id = (int) $id;
+            if (in_array($id, $validIds, true)) {
+                $laporan->dokumentasis()->whereKey($id)->update(['urutan' => ++$posisi]);
+            }
         }
     }
 
