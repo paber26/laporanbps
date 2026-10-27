@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -54,5 +55,32 @@ class User extends Authenticatable
     public function pegawai(): HasOne
     {
         return $this->hasOne(Pegawai::class);
+    }
+
+    /**
+     * Laporan yang dibuat/dimiliki akun ini.
+     */
+    public function laporans(): HasMany
+    {
+        return $this->hasMany(Laporan::class);
+    }
+
+    /**
+     * KAK yang dibuat/dimiliki akun ini.
+     */
+    public function kaks(): HasMany
+    {
+        return $this->hasMany(Kak::class);
+    }
+
+    /**
+     * Apakah pengguna ini administrator (oversight penuh).
+     *
+     * Catatan: kolom `role` sengaja tidak masuk $fillable agar tidak bisa
+     * diubah lewat mass-assignment (mis. form registrasi).
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

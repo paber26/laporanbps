@@ -42,6 +42,17 @@ class Kak extends Model
         'tanggal_penandatanganan' => 'date',
     ];
 
+    /**
+     * Pemilik (pembuat) KAK. Dipakai untuk otorisasi edit/hapus.
+     *
+     * Catatan: `user_id` sengaja tidak masuk $fillable; diisi lewat relasi
+     * ($user->kaks()->create(...)) agar tidak bisa dioper lewat request.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function pegawai(): BelongsTo
     {
         return $this->belongsTo(Pegawai::class);

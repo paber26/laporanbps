@@ -41,6 +41,7 @@
                 })->values(),
                 'show_url' => route('laporan.show', $lap),
                 'edit_url' => route('laporan.edit', $lap),
+                'can_edit' => auth()->user()->can('update', $lap),
                 'pdf_url' => route('laporan.pdf', $lap) . '?ukuran=f4',
                 'word_url' => route('laporan.word', $lap),
             ]
@@ -305,16 +306,20 @@
                                                     class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
                                                 Lihat
                                             </button>
+                                            @can('update', $laporan)
                                             <a href="{{ route('laporan.edit', $laporan) }}" class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400">Edit</a>
+                                            @endcan
                                             <form action="{{ route('laporan.duplicate', $laporan) }}" method="POST" onsubmit="return confirm('Duplikat laporan ini?')">
                                                @csrf
                                                <button type="submit" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 rounded transition-colors text-sm">Duplikat</button>
                                            </form>
 
+                                           @can('delete', $laporan)
                                            <form action="{{ route('laporan.destroy', $laporan) }}" method="POST" onsubmit="return confirm('Hapus laporan ini?')">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400">Hapus</button>
                                             </form>
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>
@@ -589,6 +594,7 @@
                                         Word (.docx)
                                     </a>
                                     <a :href="selected.edit_url"
+                                       x-show="selected?.can_edit"
                                        class="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition font-medium">
                                         Edit
                                     </a>

@@ -3,7 +3,9 @@
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Preview Laporan</h2>
             <div class="flex items-center gap-2">
+                @can('update', $laporan)
                 <a href="{{ route('laporan.edit', $laporan) }}" class="px-3 py-2 text-sm bg-amber-500 text-white rounded-md hover:bg-amber-600">Edit</a>
+                @endcan
                 <a href="{{ route('laporan.index') }}" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Kembali</a>
             </div>
         </div>

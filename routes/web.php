@@ -37,7 +37,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('master-pembiayaan', MasterPembiayaanController::class)
         ->parameters(['master-pembiayaan' => 'masterPembiayaan'])
         ->except('show');
-    Route::resource('pegawai', PegawaiController::class)->except('show');
+    // Master Pegawai: khusus administrator.
+    Route::resource('pegawai', PegawaiController::class)->except('show')->middleware('admin');
 
     // Kerangka Acuan Kerja (KAK) + cetak.
     Route::get('kak/{kak}/word', [KakController::class, 'exportWord'])->name('kak.word');

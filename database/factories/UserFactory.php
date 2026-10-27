@@ -42,4 +42,15 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Jadikan pengguna administrator.
+     *
+     * `role` bukan mass-assignable, jadi di-set via callback (bukan state()).
+     */
+    public function admin(): static
+    {
+        return $this->afterMaking(fn (User $user) => $user->role = 'admin')
+            ->afterCreating(fn (User $user) => $user->forceFill(['role' => 'admin'])->save());
+    }
 }

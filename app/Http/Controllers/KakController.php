@@ -38,7 +38,8 @@ class KakController extends Controller
         $data = $this->validated($request);
 
         $kak = DB::transaction(function () use ($request, $data) {
-            $kak = Kak::create($data);
+            // Pemilik di-set lewat relasi (bukan mass-assignment) agar aman.
+            $kak = $request->user()->kaks()->create($data);
             $this->syncAnggaran($request, $kak);
 
             return $kak;
@@ -58,6 +59,8 @@ class KakController extends Controller
 
     public function edit(Kak $kak): View
     {
+        $this->authorize('update', $kak);
+
         $kak->load(['anggarans']);
 
         return view('kak.edit', [
@@ -68,6 +71,8 @@ class KakController extends Controller
 
     public function update(Request $request, Kak $kak): RedirectResponse
     {
+        $this->authorize('update', $kak);
+
         $data = $this->validated($request);
 
         DB::transaction(function () use ($request, $kak, $data) {
@@ -82,6 +87,8 @@ class KakController extends Controller
 
     public function destroy(Kak $kak): RedirectResponse
     {
+        $this->authorize('delete', $kak);
+
         $kak->delete();
 
         return redirect()
@@ -149,6 +156,8 @@ class KakController extends Controller
      */
     public function uploadDocx(Request $request, Kak $kak): RedirectResponse
     {
+        $this->authorize('update', $kak);
+
         $request->validate([
             'file' => ['required', 'file', 'mimes:docx', 'max:10240'],
         ]);

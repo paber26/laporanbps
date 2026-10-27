@@ -3,7 +3,9 @@
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Preview KAK</h2>
             <div class="flex items-center gap-2">
+                @can('update', $kak)
                 <a href="{{ route('kak.edit', $kak) }}" class="px-3 py-2 text-sm bg-amber-500 text-white rounded-md hover:bg-amber-600">Edit</a>
+                @endcan
                 <a href="{{ route('kak.index') }}" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100">Kembali</a>
             </div>
         </div>
@@ -43,6 +45,7 @@
                 <a id="btn-pdf" href="{{ route('kak.pdf', $kak) }}?ukuran=a4" target="_blank" class="px-3 py-2 text-sm bg-rose-600 text-white rounded-md hover:bg-rose-700">Cetak PDF</a>
                 <a href="{{ route('kak.docx.download', $kak) }}" class="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">Unduh DOCX Hasil Edit</a>
 
+                @can('update', $kak)
                 <form action="{{ route('kak.docx.upload', $kak) }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2 ml-4 pl-4 border-l border-gray-300 dark:border-gray-600">
                     @csrf
                     <label class="text-sm text-gray-600 dark:text-gray-400">Unggah DOCX
@@ -51,6 +54,7 @@
                     </label>
                     <button type="submit" class="px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Unggah</button>
                 </form>
+                @endcan
             </div>
 
             {{-- Dokumen (mirip hasil cetak) --}}

@@ -225,7 +225,8 @@ class LaporanController extends Controller
 
         $laporan = DB::transaction(function () use ($request, $data) {
             $data = $this->withPembiayaan($request, $data);
-            $laporan = Laporan::create($data);
+            // Pemilik di-set lewat relasi (bukan mass-assignment) agar aman.
+            $laporan = $request->user()->laporans()->create($data);
 
             $this->syncUraians($request, $laporan);
             $this->storeDokumentasi($request, $laporan);
@@ -254,6 +255,8 @@ class LaporanController extends Controller
      */
     public function edit(Laporan $laporan): View
     {
+        $this->authorize('update', $laporan);
+
         $laporan->load(['uraians', 'dokumentasis']);
 
         return view('laporan.edit', [
@@ -268,6 +271,8 @@ class LaporanController extends Controller
      */
     public function update(Request $request, Laporan $laporan): RedirectResponse
     {
+        $this->authorize('update', $laporan);
+
         $data = $this->validateLaporan($request);
 
         DB::transaction(function () use ($request, $laporan, $data) {
@@ -296,6 +301,8 @@ class LaporanController extends Controller
      */
     public function destroy(Laporan $laporan): RedirectResponse
     {
+        $this->authorize('delete', $laporan);
+
         DB::transaction(function () use ($laporan) {
             foreach ($laporan->dokumentasis as $dok) {
                 Storage::disk('public')->delete($dok->image_path);
@@ -311,13 +318,15 @@ class LaporanController extends Controller
     /**
      * Duplikat laporan beserta relasinya.
      */
-    public function duplicate(Laporan $laporan): RedirectResponse
+    public function duplicate(Request $request, Laporan $laporan): RedirectResponse
     {
         $laporan->load(['pembiayaan', 'uraians', 'dokumentasis']);
 
-        $new = DB::transaction(function () use ($laporan) {
+        $new = DB::transaction(function () use ($request, $laporan) {
             $new = $laporan->replicate();
             $new->judul_laporan = $new->judul_laporan . ' (Salinan)';
+            // Salinan dimiliki oleh pengguna yang menduplikat (bukan pemilik asal).
+            $new->user_id = $request->user()->id;
             $new->save();
 
             if ($laporan->pembiayaan) {

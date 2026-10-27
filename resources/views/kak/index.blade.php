@@ -40,11 +40,15 @@
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2 whitespace-nowrap">
                                             <a href="{{ route('kak.show', $kak) }}" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Lihat</a>
+                                            @can('update', $kak)
                                             <a href="{{ route('kak.edit', $kak) }}" class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400">Edit</a>
+                                            @endcan
+                                            @can('delete', $kak)
                                             <form action="{{ route('kak.destroy', $kak) }}" method="POST" onsubmit="return confirm('Hapus KAK ini?')">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400">Hapus</button>
                                             </form>
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>

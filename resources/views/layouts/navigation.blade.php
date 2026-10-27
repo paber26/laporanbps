@@ -24,9 +24,11 @@
                     <x-nav-link :href="route('master-pembiayaan.index')" :active="request()->routeIs('master-pembiayaan.*')">
                         {{ __('Master Pembiayaan') }}
                     </x-nav-link>
+                    @if (auth()->user()->isAdmin())
                     <x-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.*')">
                         {{ __('Pegawai') }}
                     </x-nav-link>
+                    @endif
                     <x-nav-link :href="route('kak.index')" :active="request()->routeIs('kak.*')">
                         {{ __('KAK') }}
                     </x-nav-link>
@@ -119,9 +121,11 @@
             <x-responsive-nav-link :href="route('master-pembiayaan.index')" :active="request()->routeIs('master-pembiayaan.*')">
                 {{ __('Master Pembiayaan') }}
             </x-responsive-nav-link>
+            @if (auth()->user()->isAdmin())
             <x-responsive-nav-link :href="route('pegawai.index')" :active="request()->routeIs('pegawai.*')">
                 {{ __('Pegawai') }}
             </x-responsive-nav-link>
+            @endif
             <x-responsive-nav-link :href="route('kak.index')" :active="request()->routeIs('kak.*')">
                 {{ __('KAK') }}
             </x-responsive-nav-link>

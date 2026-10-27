@@ -23,6 +23,12 @@ class DemoSeeder extends Seeder
             ]
         );
 
+        // `role` bukan mass-assignable, jadi di-set eksplisit.
+        if ($user->role !== 'admin') {
+            $user->role = 'admin';
+            $user->save();
+        }
+
         $pegawai = Pegawai::firstOrCreate(
             ['nip' => '200011112023021002'],
             [
@@ -45,6 +51,12 @@ class DemoSeeder extends Seeder
                 'lokasi_tujuan' => 'Minahasa Selatan',
             ]
         );
+
+        // Pemilik (bukan mass-assignable) di-set eksplisit.
+        if (! $laporan->user_id) {
+            $laporan->user_id = $user->id;
+            $laporan->save();
+        }
 
         if ($laporan->uraians()->count() === 0) {
             LaporanUraian::create([
