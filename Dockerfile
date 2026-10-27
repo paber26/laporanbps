@@ -19,6 +19,7 @@ RUN install-php-extensions \
     pcntl \
     bcmath \
     gd \
+    imagick \
     zip \
     opcache
 

@@ -29,7 +29,9 @@
         .ttd-mengetahui .label { min-height: 52pt; }
         .ttd-mengetahui .space { height: 60pt; }
         .ttd-mengetahui .nama { text-decoration: underline; font-weight: bold; }
-        .page-break { page-break-before: always; }
+        /* Mulai lampiran di halaman baru. Dipasang langsung pada heading (bukan
+           div kosong) agar tidak menyisakan ruang kosong besar di atas halaman. */
+        .lampiran-start { page-break-before: always; margin-top: 0; }
         .lampiran-title { text-align: center; font-weight: bold; text-transform: uppercase; margin: 0 0 14pt; }
         table.uraian { width: 100%; border-collapse: collapse; }
         table.uraian th, table.uraian td { border: 1px solid #000; padding: 5pt 6pt; vertical-align: top; text-align: left; font-size: 11pt; }
@@ -47,10 +49,14 @@
         table.uraian tr.open > td { border-bottom: none; }
         .col-tgl { width: 22%; }
         .col-jam { width: 15%; }
+        /* Grid dokumentasi: tiap sel kotak seragam (tinggi baris sama), foto
+           diskalakan agar pas di dalam kotak & dipusatkan (horizontal + vertikal).
+           Foto beda rasio (potret/lanskap) tetap rapi karena dibatasi max-height. */
         .foto-grid { width: 100%; border-collapse: collapse; }
-        .foto-grid td { width: 50%; text-align: center; padding: 8pt; vertical-align: top; }
-        .foto-grid img { width: 100%; height: auto; border: 1px solid #333; }
-        .foto-cap { font-size: 10pt; margin-top: 4pt; }
+        .foto-grid tr { page-break-inside: avoid; }
+        .foto-grid td { width: 50%; height: 175pt; text-align: center; padding: 8pt 10pt; vertical-align: middle; }
+        .foto-grid img { max-width: 100%; max-height: 145pt; width: auto; height: auto; border: 1px solid #999; }
+        .foto-cap { font-size: 9.5pt; margin-top: 5pt; color: #333; font-style: italic; line-height: 1.3; }
         
         /* Fix gambar dari CKEditor agar tidak melebihi kertas */
         table.uraian img { max-width: 100% !important; height: auto !important; }
@@ -122,8 +128,7 @@
     </table>
 
     {{-- ================= HALAMAN 2: LAMPIRAN 1 ================= --}}
-    <div class="page-break"></div>
-    <p class="bold" style="margin-bottom:12pt;">Lampiran 1</p>
+    <p class="bold lampiran-start" style="margin-bottom:12pt;">Lampiran 1</p>
     <div class="lampiran-title">
         Uraian Kegiatan<br>
         {{ $laporan->perihal_laporan }}<br>
@@ -204,8 +209,7 @@
     </table>
 
     {{-- ================= HALAMAN 3: LAMPIRAN 2 ================= --}}
-    <div class="page-break"></div>
-    <p class="bold" style="margin-bottom:12pt;">Lampiran 2</p>
+    <p class="bold lampiran-start" style="margin-bottom:12pt;">Lampiran 2</p>
     <div class="lampiran-title">
         Dokumentasi Kegiatan<br>
         {{ $laporan->perihal_laporan }}
