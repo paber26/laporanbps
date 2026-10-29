@@ -22,15 +22,14 @@ class ChromePdf
     {
         $bin = self::binary();
 
-        $dir = storage_path('app/chrome-tmp');
-        if (! is_dir($dir)) {
-            @mkdir($dir, 0775, true);
-        }
-
-        $id = uniqid('pdf_', true);
+        // Pakai direktori temp sistem (/tmp, world-writable & sticky) agar bisa
+        // ditulis user mana pun — php-fpm (www-data) maupun CLI (root) — tanpa
+        // masalah kepemilikan direktori.
+        $dir = sys_get_temp_dir();
+        $id = uniqid('lapbps_pdf_', true);
         $htmlFile = $dir.'/'.$id.'.html';
         $pdfFile = $dir.'/'.$id.'.pdf';
-        $profile = $dir.'/profile_'.$id;
+        $profile = $dir.'/'.$id.'_profile';
 
         file_put_contents($htmlFile, $html);
 
