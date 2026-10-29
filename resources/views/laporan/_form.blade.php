@@ -451,7 +451,7 @@
             if (input) input.value = '';
         } catch (e) {
             console.error('Gagal mengunggah foto:', e);
-            alert(e.message || 'Gagal mengunggah foto. Coba lagi.');
+            window.notify('error', e.message || 'Gagal mengunggah foto. Coba lagi.');
         } finally {
             toggleUploading(row, false);
         }
@@ -572,7 +572,7 @@
         if (e.target.classList.contains('btn-remove-uraian')) {
             const row = e.target.closest('.uraian-row');
             if (uraianContainer.querySelectorAll('.uraian-row').length <= 1) {
-                alert('Minimal harus ada satu uraian kegiatan.');
+                window.notify('warning', 'Minimal harus ada satu uraian kegiatan.');
                 return;
             }
             const ta = row.querySelector('.uraian-editor');
@@ -692,12 +692,16 @@
     }
 
     clearBtn.addEventListener('click', function () {
-        if (!confirm('Hapus draf tersimpan dan muat ulang halaman dengan data dari server?')) return;
-        clearDraft();
-        // Muat ulang agar form kembali ke data server (draf lokal tidak lagi memengaruhi
-        // tampilan) — tanpa reload, form tetap menampilkan isian saat ini meski draf
-        // sudah terhapus dari localStorage, sehingga terlihat seperti "tidak berubah".
-        window.location.reload();
+        window.confirmDialog('Hapus draf tersimpan dan muat ulang halaman dengan data dari server?', {
+            title: 'Hapus Draf', okText: 'Hapus & Muat Ulang', variant: 'danger'
+        }).then(function (ok) {
+            if (!ok) return;
+            clearDraft();
+            // Muat ulang agar form kembali ke data server (draf lokal tidak lagi memengaruhi
+            // tampilan) — tanpa reload, form tetap menampilkan isian saat ini meski draf
+            // sudah terhapus dari localStorage, sehingga terlihat seperti "tidak berubah".
+            window.location.reload();
+        });
     });
 
     // Simpan saat mengetik / mengubah field mana pun.
@@ -824,7 +828,7 @@
     document.getElementById('btn-paste-clipboard')?.addEventListener('click', async function () {
         try {
             if (!navigator.clipboard || !navigator.clipboard.read) {
-                alert('Browser Anda tidak mendukung tombol ini. Silakan gunakan pintasan keyboard (Ctrl+V / Cmd+V) di halaman ini untuk paste gambar.');
+                window.notify('warning', 'Browser Anda tidak mendukung tombol ini. Gunakan pintasan Ctrl+V / Cmd+V di halaman ini untuk menempel gambar.', { duration: 8000 });
                 return;
             }
             const items = await navigator.clipboard.read();
@@ -856,11 +860,11 @@
             } else {
                 let typesFound = [];
                 for (const item of items) { typesFound.push(...item.types); }
-                alert('Tidak ditemukan gambar di clipboard (Tipe yang terbaca: ' + (typesFound.join(', ') || 'kosong') + ').\n\nJika Anda menyalin *file gambar* dari folder komputer (bukan menyalin gambarnya langsung), tombol ini mungkin tidak dapat membacanya.\n\nSOLUSI: Silakan klik sembarang tempat kosong di halaman ini, lalu tekan langsung Ctrl+V (atau Cmd+V) di keyboard Anda, atau gunakan tombol "+ Tambah Foto".');
+                window.notify('info', 'Tidak ditemukan gambar di clipboard (terbaca: ' + (typesFound.join(', ') || 'kosong') + '). Jika Anda menyalin file gambar dari folder, klik area kosong halaman ini lalu tekan Ctrl+V / Cmd+V, atau gunakan tombol "+ Tambah Foto".', { duration: 10000 });
             }
         } catch (err) {
             console.error('Gagal membaca clipboard:', err);
-            alert('Gagal membaca clipboard. Pastikan Anda mengizinkan browser untuk mengakses clipboard.\n\nAlternatif: Anda bisa langsung menekan Ctrl+V (atau Cmd+V) di halaman ini untuk menempelkan foto.');
+            window.notify('error', 'Gagal membaca clipboard. Pastikan Anda mengizinkan akses clipboard, atau tekan langsung Ctrl+V / Cmd+V di halaman ini untuk menempel foto.', { duration: 9000 });
         }
     });
 

@@ -8,9 +8,6 @@
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            @if (session('status'))
-                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
-            @endif
 
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -41,7 +38,7 @@
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2 whitespace-nowrap">
                                         <a href="{{ route('pegawai.edit', $p) }}" class="text-amber-600 dark:text-amber-400 hover:underline">Edit</a>
-                                        <form action="{{ route('pegawai.destroy', $p) }}" method="POST" onsubmit="return confirm('Hapus pegawai ini?')">
+                                        <form action="{{ route('pegawai.destroy', $p) }}" method="POST" data-confirm="Hapus pegawai ini? Tindakan ini tidak dapat dibatalkan." data-confirm-title="Hapus Pegawai" data-confirm-ok="Hapus" data-confirm-variant="danger">
                                             @csrf @method('DELETE')
                                             <button class="text-rose-600 dark:text-rose-400 hover:underline">Hapus</button>
                                         </form>

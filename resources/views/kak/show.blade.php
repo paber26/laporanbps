@@ -28,9 +28,6 @@
     <div class="py-8">
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
 
-            @if (session('status'))
-                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
-            @endif
 
             {{-- Panel cetak --}}
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 flex flex-wrap items-center gap-3">

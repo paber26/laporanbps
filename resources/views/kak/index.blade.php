@@ -10,9 +10,6 @@
 
     <div class="py-8">
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
-            @if (session('status'))
-                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
-            @endif
 
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
@@ -44,7 +41,7 @@
                                             <a href="{{ route('kak.edit', $kak) }}" class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400">Edit</a>
                                             @endcan
                                             @can('delete', $kak)
-                                            <form action="{{ route('kak.destroy', $kak) }}" method="POST" onsubmit="return confirm('Hapus KAK ini?')">
+                                            <form action="{{ route('kak.destroy', $kak) }}" method="POST" data-confirm="Hapus KAK ini? Tindakan ini tidak dapat dibatalkan." data-confirm-title="Hapus KAK" data-confirm-ok="Hapus" data-confirm-variant="danger">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400">Hapus</button>
                                             </form>

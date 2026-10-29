@@ -45,5 +45,8 @@
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Notifikasi global (toast + modal konfirmasi) --}}
+        @include('partials.notifications')
     </body>
 </html>

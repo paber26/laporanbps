@@ -134,9 +134,6 @@
          @open-filter-drawer.window="openFilterDrawer()"
          @keydown.escape.window="handleEscape()">
         <div class="w-full mx-auto sm:px-6 lg:px-8 space-y-4">
-            @if (session('status'))
-                <div class="bg-green-100 dark:bg-green-900/40 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-md">{{ session('status') }}</div>
-            @endif
 
             {{-- Toolbar Ringkas & Status Filter Aktif --}}
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-700/60 shadow-sm">
@@ -309,13 +306,13 @@
                                             @can('update', $laporan)
                                             <a href="{{ route('laporan.edit', $laporan) }}" class="text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400">Edit</a>
                                             @endcan
-                                            <form action="{{ route('laporan.duplicate', $laporan) }}" method="POST" onsubmit="return confirm('Duplikat laporan ini?')">
+                                            <form action="{{ route('laporan.duplicate', $laporan) }}" method="POST" data-confirm="Duplikat laporan ini beserta uraian & fotonya?" data-confirm-title="Duplikat Laporan" data-confirm-ok="Duplikat">
                                                @csrf
                                                <button type="submit" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium px-2 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 rounded transition-colors text-sm">Duplikat</button>
                                            </form>
 
                                            @can('delete', $laporan)
-                                           <form action="{{ route('laporan.destroy', $laporan) }}" method="POST" onsubmit="return confirm('Hapus laporan ini?')">
+                                           <form action="{{ route('laporan.destroy', $laporan) }}" method="POST" data-confirm="Hapus laporan ini? Tindakan ini tidak dapat dibatalkan." data-confirm-title="Hapus Laporan" data-confirm-ok="Hapus" data-confirm-variant="danger">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400">Hapus</button>
                                             </form>
