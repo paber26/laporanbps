@@ -50,10 +50,12 @@
            antar-baris dalam satu hari disembunyikan (border-top/-bottom) supaya
            potongan-potongan itu tampil sebagai satu sel utuh; garis vertikal
            kolom tetap tergambar di tiap baris. */
-        /* Antar-paragraf (tiap paragraf = 1 baris chunk) jangan terlalu renggang:
-           hilangkan padding bawah baris "open" & kecilkan padding atas baris "cont"
-           sehingga jeda antar-paragraf ~4pt, bukan 10pt (5pt+5pt). */
-        table.uraian tr.cont > td { border-top: none; padding-top: 4pt; }
+        /* Uraian dipecah per-kalimat (banyak baris chunk) agar mengalir antar-halaman.
+           - cont  : potongan lanjutan (sembunyikan garis atas; rapat, tanpa jeda)
+           - para  : potongan yang MENGAWALI paragraf baru -> beri jeda ~4pt
+           - open  : potongan yang masih bersambung ke bawah (sembunyikan garis bawah) */
+        table.uraian tr.cont > td { border-top: none; padding-top: 0; }
+        table.uraian tr.para > td { padding-top: 4pt; }
         table.uraian tr.open > td { border-bottom: none; padding-bottom: 0; }
         .col-tgl { width: 22%; }
         .col-jam { width: 15%; }
@@ -185,10 +187,10 @@
                          sebagai satu blok utuh, sekaligus membiarkan teks mengalir
                          antar-halaman tanpa celah kosong. --}}
                     @foreach ($chunks as $ci => $chunk)
-                        <tr @class(['cont' => $ci > 0, 'open' => $ci < $n - 1])>
+                        <tr @class(['cont' => $ci > 0, 'para' => $ci > 0 && ($chunk['new_para'] ?? true), 'open' => $ci < $n - 1])>
                             <td class="col-tgl">{{ $ci === 0 ? $tgl : '' }}</td>
                             <td class="col-jam">{{ $ci === 0 ? $jam : '' }}</td>
-                            <td class="uraian-cell">{!! $chunk !!}</td>
+                            <td class="uraian-cell">{!! $chunk['html'] ?? $chunk !!}</td>
                         </tr>
                     @endforeach
                 @endif
