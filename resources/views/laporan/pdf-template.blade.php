@@ -68,8 +68,16 @@
         
         /* Fix gambar dari CKEditor agar tidak melebihi kertas */
         table.uraian img { max-width: 100% !important; height: auto !important; }
-        table.uraian figure.image { margin: 5pt 0; text-align: center; }
-        table.uraian figure.image figcaption { font-size: 9pt; color: #555; }
+        /* Gambar CKEditor: pusatkan figure seperti di editor. `margin: auto`
+           memusatkan figure yang di-resize (punya width<100%); `text-align:center`
+           memusatkan <img> untuk figure selebar penuh. Hormati align kiri/kanan. */
+        table.uraian figure.image { margin: 5pt auto; text-align: center; }
+        table.uraian figure.image img { display: block; margin: 0 auto; }
+        table.uraian figure.image.image-style-align-left,
+        table.uraian figure.image.image-style-block-align-left { margin-left: 0; margin-right: auto; }
+        table.uraian figure.image.image-style-align-right,
+        table.uraian figure.image.image-style-block-align-right { margin-left: auto; margin-right: 0; }
+        table.uraian figure.image figcaption { font-size: 9pt; color: #555; text-align: center; }
     </style>
 </head>
 <body>
