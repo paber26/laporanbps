@@ -45,8 +45,11 @@
            antar-baris dalam satu hari disembunyikan (border-top/-bottom) supaya
            potongan-potongan itu tampil sebagai satu sel utuh; garis vertikal
            kolom tetap tergambar di tiap baris. */
-        table.uraian tr.cont > td { border-top: none; }
-        table.uraian tr.open > td { border-bottom: none; }
+        /* Antar-paragraf (tiap paragraf = 1 baris chunk) jangan terlalu renggang:
+           hilangkan padding bawah baris "open" & kecilkan padding atas baris "cont"
+           sehingga jeda antar-paragraf ~4pt, bukan 10pt (5pt+5pt). */
+        table.uraian tr.cont > td { border-top: none; padding-top: 4pt; }
+        table.uraian tr.open > td { border-bottom: none; padding-bottom: 0; }
         .col-tgl { width: 22%; }
         .col-jam { width: 15%; }
         /* Grid dokumentasi: tiap sel kotak seragam (tinggi baris sama), foto
