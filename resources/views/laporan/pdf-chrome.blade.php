@@ -79,7 +79,7 @@
             <td class="p-label">Perihal</td>
             <td class="p-sep">:</td>
             <td>{{ $laporan->perihal_laporan }}</td>
-            <td class="p-place">({{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('d F Y') }})</td>
+            <td class="p-place">({{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }})</td>
         </tr>
     </table>
 
@@ -157,7 +157,7 @@
         <tbody>
             @forelse ($laporan->uraians as $u)
                 @php
-                    $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('d F Y');
+                    $tgl = $u->tanggal_kegiatan?->translatedFormat('l') . '/' . $u->tanggal_kegiatan?->translatedFormat('j F Y');
                     $jam = trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? ''));
                 @endphp
                 <tr>
@@ -186,7 +186,7 @@
             <td>
                 <div class="label">
                     &nbsp;<br>
-                    {{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('d F Y') }}<br>
+                    {{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }}<br>
                     Pelaku Perjalanan Dinas
                 </div>
                 @if ($ttd)
