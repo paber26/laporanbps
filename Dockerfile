@@ -23,6 +23,19 @@ RUN install-php-extensions \
     zip \
     opcache
 
+# Chromium headless untuk cetak PDF (mesin render Chrome menggantikan dompdf agar
+# page-break persis seperti browser). Plus font serif mirip Times New Roman.
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-liberation \
+    font-noto
+ENV CHROME_BIN=/usr/bin/chromium-browser
+
 # Naikkan limit upload/memori PHP (default image 2M terlalu kecil untuk foto).
 COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
 

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Laporan;
 use App\Models\MasterPembiayaan;
 use App\Models\Pegawai;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -361,21 +360,28 @@ class LaporanController extends Controller
     }
 
     /**
-     * Cetak PDF dengan pilihan ukuran kertas (A4 / F4 / Legal).
+     * Cetak PDF (via Chrome headless) dengan pilihan ukuran kertas (A4 / F4 / Legal).
+     *
+     * Dirender memakai mesin Chrome (bukan dompdf) agar page-break persis seperti
+     * browser: paragraf mengalir inline DAN terpecah mulus antar-halaman tanpa
+     * menyisakan whitespace.
      */
     public function exportPdf(Request $request, Laporan $laporan): Response
     {
         $laporan->load(['pegawai', 'pembiayaan', 'uraians', 'dokumentasis']);
 
         $ukuran = strtolower($request->query('ukuran', 'f4'));
-        $paper = $this->paperSize($ukuran);
+        $paperCss = $this->paperCss($ukuran);
 
-        $pdf = Pdf::loadView('laporan.pdf-template', compact('laporan'))
-            ->setPaper($paper, 'portrait');
+        $html = view('laporan.pdf-chrome', compact('laporan', 'paperCss'))->render();
+        $pdf = \App\Support\ChromePdf::fromHtml($html);
 
         $namaFile = 'Laporan-'.$laporan->id.'-'.str($laporan->pegawai->nama)->slug().'.pdf';
 
-        return $pdf->stream($namaFile);
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$namaFile.'"',
+        ]);
     }
 
     /**
@@ -683,17 +689,14 @@ class LaporanController extends Controller
     }
 
     /**
-     * Peta ukuran kertas untuk dompdf.
-     *
-     * @return string|array<int, float>
+     * Ukuran kertas sebagai nilai CSS `@page { size: ... }` untuk Chrome.
      */
-    protected function paperSize(string $ukuran): string|array
+    protected function paperCss(string $ukuran): string
     {
         return match ($ukuran) {
-            // F4 / Folio = 215mm x 330mm (dalam poin, 1mm = 2.83465pt).
-            'f4', 'folio' => [0, 0, 609.45, 935.43],
-            'legal' => 'legal',
-            default => 'a4',
+            'f4', 'folio' => '215mm 330mm',
+            'legal' => '216mm 356mm',
+            default => '210mm 297mm', // A4
         };
     }
 }

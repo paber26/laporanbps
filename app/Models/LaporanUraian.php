@@ -47,6 +47,55 @@ class LaporanUraian extends Model
     }
 
     /**
+     * Uraian siap-cetak untuk mesin Chrome (print-to-pdf): HTML utuh (paragraf
+     * mengalir normal, dibiarkan browser yang memecah antar-halaman), dengan
+     * gambar <img src="/storage/..."> diubah menjadi data URI base64 agar tampil
+     * tanpa akses server (HTML dirender dari berkas file:// sementara).
+     */
+    public function getUraianHtmlPdfAttribute(): string
+    {
+        $text = trim((string) $this->uraian_text);
+        if ($text === '') {
+            return '';
+        }
+
+        if ($text !== strip_tags($text)) {
+            return $this->embedImagesAsDataUri($text);
+        }
+
+        return '<p>'.nl2br(e($text)).'</p>';
+    }
+
+    /**
+     * Ubah setiap <img src="/storage/..."> menjadi data URI base64 (dompdf &
+     * Chrome print dari berkas lokal tidak memuat URL /storage).
+     */
+    private function embedImagesAsDataUri(string $html): string
+    {
+        return preg_replace_callback('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', function ($matches) {
+            $url = $matches[1];
+
+            if (str_starts_with($url, 'data:')) {
+                return $matches[0];
+            }
+
+            $appUrl = rtrim((string) config('app.url'), '/');
+            $storageUrl = \Illuminate\Support\Facades\Storage::url(''); // mis. /storage/
+
+            if (str_starts_with($url, $appUrl.$storageUrl) || str_starts_with($url, $storageUrl)) {
+                $path = ltrim(str_replace([$appUrl.$storageUrl, $storageUrl], '', $url), '/');
+                $absPath = \Illuminate\Support\Facades\Storage::disk('public')->path($path);
+
+                if ($base64 = \App\Support\PdfImage::dataUri($absPath)) {
+                    return str_replace($url, $base64, $matches[0]);
+                }
+            }
+
+            return $matches[0];
+        }, $html);
+    }
+
+    /**
      * Uraian dipecah menjadi sekumpulan potongan HTML kecil, satu potongan =
      * satu baris tabel di PDF.
      *
