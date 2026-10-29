@@ -534,7 +534,7 @@
                                                             <span x-show="u.jam" x-text="'• ' + u.jam"></span>
                                                         </div>
                                                     </div>
-                                                    <div class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-none space-y-2 [&>p]:mb-2.5 last:[&>p]:mb-0"
+                                                    <div class="uraian-html text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-none space-y-2 [&>p]:mb-2.5 last:[&>p]:mb-0"
                                                          style="line-height: 1.65;"
                                                          x-html="u.html"></div>
                                                 </div>

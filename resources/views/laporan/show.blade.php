@@ -100,7 +100,7 @@
                             <tr>
                                 <td class="border p-2 align-top">{{ $u->tanggal_kegiatan?->translatedFormat('l') }}/{{ $u->tanggal_kegiatan?->format('d-m-Y') }}</td>
                                 <td class="border p-2 align-top">{{ trim(($u->jam_mulai ?? '') . (($u->jam_mulai && $u->jam_selesai) ? '-' : '') . ($u->jam_selesai ?? '')) }}</td>
-                                <td class="border p-2 align-top prose max-w-none">{!! $u->uraian_html !!}</td>
+                                <td class="border p-2 align-top prose max-w-none uraian-html">{!! $u->uraian_html !!}</td>
                             </tr>
                         @empty
                             <tr><td colspan="3" class="border p-2 text-center text-gray-500">Belum ada uraian.</td></tr>

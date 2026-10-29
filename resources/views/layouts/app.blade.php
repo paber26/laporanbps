@@ -26,6 +26,16 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        {{-- Pusatkan gambar CKEditor pada preview uraian (show & modal) agar sama
+             seperti di editor; hormati perataan kiri/kanan eksplisit. --}}
+        <style>
+            .uraian-html figure.image { display: table; margin: 0.75rem auto; max-width: 100%; }
+            .uraian-html figure.image img { display: block; width: 100%; height: auto; }
+            .uraian-html figure.image.image-style-align-left { margin-left: 0; margin-right: auto; }
+            .uraian-html figure.image.image-style-align-right { margin-left: auto; margin-right: 0; }
+            .uraian-html figure.image > figcaption { text-align: center; font-size: 0.8rem; color: #6b7280; }
+        </style>
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
