@@ -13,8 +13,13 @@
         .bold { font-weight: bold; }
         .uppercase { text-transform: uppercase; }
         h1.judul { font-size: 12pt; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0 0 18pt; }
-        .perihal-row { width: 100%; }
+        /* Baris Perihal: label "Perihal : " + nilai (membungkus rapi/hanging-indent),
+           dan tempat+tanggal di kanan yang TIDAK boleh terpotong (nowrap). */
+        .perihal-row { width: 100%; border-collapse: collapse; }
         .perihal-row td { vertical-align: top; padding: 0; }
+        .perihal-row .p-label { white-space: nowrap; }
+        .perihal-row .p-sep { white-space: nowrap; padding: 0 6pt 0 2pt; }
+        .perihal-row .p-place { white-space: nowrap; text-align: right; padding-left: 18pt; }
         .list { margin: 0 0 8pt; padding: 0; list-style: none; }
         .list > li { margin-bottom: 2pt; }
         .sub { margin-left: 22pt; }
@@ -74,8 +79,10 @@
 
     <table class="perihal-row">
         <tr>
-            <td style="width:62%;">Perihal : {{ $laporan->perihal_laporan }}</td>
-            <td class="right" style="width:38%;">({{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }})</td>
+            <td class="p-label">Perihal</td>
+            <td class="p-sep">:</td>
+            <td>{{ $laporan->perihal_laporan }}</td>
+            <td class="p-place">({{ $laporan->tempat_laporan }}, {{ $laporan->tanggal_laporan?->translatedFormat('j F Y') }})</td>
         </tr>
     </table>
 
