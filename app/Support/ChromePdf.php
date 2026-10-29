@@ -15,6 +15,9 @@ use RuntimeException;
  */
 class ChromePdf
 {
+    /** Batas waktu render Chrome (detik). Harus < fastcgi_read_timeout nginx. */
+    private const TIMEOUT_SECONDS = 60;
+
     /**
      * @return string  Byte mentah PDF.
      */
@@ -37,9 +40,16 @@ class ChromePdf
             '--headless=new',
             '--no-sandbox',
             '--disable-gpu',
-            '--disable-dev-shm-usage',
+            '--disable-dev-shm-usage',           // pakai /tmp, bukan /dev/shm (penting di container)
+            '--disable-software-rasterizer',
+            '--no-zygote',                       // proses lebih sedikit -> hemat memori
             '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--mute-audio',
             '--no-first-run',
+            '--hide-scrollbars',
             '--no-pdf-header-footer',            // tanpa header/footer bawaan (url, tanggal)
             '--run-all-compositor-stages-before-draw',
             '--virtual-time-budget=15000',       // beri waktu layout/gambar selesai
@@ -48,7 +58,15 @@ class ChromePdf
             'file://'.$htmlFile,
         ];
 
-        $cmd = escapeshellarg($bin);
+        // Batas waktu keras: bila Chrome menggantung (mis. memori server menipis),
+        // bunuh prosesnya agar permintaan GAGAL CEPAT (error) alih-alih menggantung
+        // sampai gateway timeout (504) & menahan worker php-fpm. `timeout` tersedia
+        // di container Alpine (busybox); di macOS/dev tidak, jadi dilewati.
+        $cmd = '';
+        if ($tb = self::timeoutBinary()) {
+            $cmd .= $tb.' -k 10 '.self::TIMEOUT_SECONDS.' ';
+        }
+        $cmd .= escapeshellarg($bin);
         foreach ($args as $a) {
             $cmd .= ' '.escapeshellarg($a);
         }
@@ -96,6 +114,21 @@ class ChromePdf
         }
 
         throw new RuntimeException('Chrome/Chromium tidak ditemukan. Set env CHROME_BIN ke path binary.');
+    }
+
+    /**
+     * Path binary `timeout` bila tersedia (Alpine/busybox & Linux), untuk
+     * membatasi waktu proses Chrome. Null di lingkungan tanpa `timeout` (mis. macOS).
+     */
+    private static function timeoutBinary(): ?string
+    {
+        foreach (['/usr/bin/timeout', '/bin/timeout'] as $p) {
+            if (is_file($p)) {
+                return $p;
+            }
+        }
+
+        return null;
     }
 
     private static function removeDir(string $path): void
