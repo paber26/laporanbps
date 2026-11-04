@@ -11,17 +11,17 @@ class ImageCompressor
      *
      * @param string $sourcePath Path relatif di disk public
      * @param string $targetPath Path relatif tujuan di disk public
-     * @param int $maxWidth Lebar maksimum (default: 600px)
-     * @param int $maxHeight Tinggi maksimum (default: 600px)
-     * @param int $quality Kualitas kompresi JPEG 1-100 (default: 75)
+     * @param int $maxWidth Lebar maksimum (default: 500px)
+     * @param int $maxHeight Tinggi maksimum (default: 500px)
+     * @param int $quality Kualitas kompresi JPEG 1-100 (default: 60)
      * @return bool
      */
     public static function createThumbnail(
         string $sourcePath,
         string $targetPath,
-        int $maxWidth = 600,
-        int $maxHeight = 600,
-        int $quality = 75
+        int $maxWidth = 500,
+        int $maxHeight = 500,
+        int $quality = 60
     ): bool {
         if (! extension_loaded('gd')) {
             return false;

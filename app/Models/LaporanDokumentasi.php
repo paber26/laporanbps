@@ -63,19 +63,17 @@ class LaporanDokumentasi extends Model
             $thumbRelative = $this->thumbnail_path;
             $disk = Storage::disk('public');
 
+            // Sudah ada → sajikan berkas statis (paling cepat, langsung via nginx).
             if ($disk->exists($thumbRelative)) {
                 return Storage::url($thumbRelative);
             }
 
-            // Buat on-the-fly bila berkas gambar asli tersedia
-            if ($this->image_path && $disk->exists($this->image_path)) {
-                if (\App\Support\ImageCompressor::createThumbnail($this->image_path, $thumbRelative)) {
-                    return Storage::url($thumbRelative);
-                }
-            }
-
-            // Fallback ke gambar asli jika kompresi belum siap
-            return $this->url;
+            // Belum ada → JANGAN generate inline saat render halaman (24 foto dalam
+            // satu request = load pertama lambat/berat). Arahkan ke route thumbnail
+            // yang membuatnya per-gambar di request terpisah (lazy, paralel) lalu
+            // di-cache. Grid galeri selalu memakai thumbnail kualitas rendah, tak
+            // pernah gambar asli penuh.
+            return route('dokumentasi.thumb', $this);
         } catch (\Throwable $e) {
             return $this->url;
         }
