@@ -213,7 +213,9 @@
                     @if ($chunk->count() == 1)
                         @php
                             $dok = $chunk->first();
-                            $img = \App\Support\PdfImage::dataUri($dok->absolute_path);
+                            // Foto tampil kecil di PDF (maks ½ halaman, tinggi 145pt),
+                            // jadi dikompres agar HTML ringan & Chrome tak timeout (504).
+                            $img = \App\Support\PdfImage::dataUri($dok->absolute_path, 800, 55);
                         @endphp
                         <td colspan="2" align="center">
                             <div style="width: 50%; margin: 0 auto;">
@@ -224,7 +226,7 @@
                     @else
                         @foreach ($chunk as $dok)
                             @php
-                                $img = \App\Support\PdfImage::dataUri($dok->absolute_path);
+                                $img = \App\Support\PdfImage::dataUri($dok->absolute_path, 800, 55);
                             @endphp
                             <td>
                                 @if ($img)<img src="{{ $img }}" alt="dokumentasi">@endif

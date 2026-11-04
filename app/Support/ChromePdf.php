@@ -52,7 +52,7 @@ class ChromePdf
             '--hide-scrollbars',
             '--no-pdf-header-footer',            // tanpa header/footer bawaan (url, tanggal)
             '--run-all-compositor-stages-before-draw',
-            '--virtual-time-budget=15000',       // beri waktu layout/gambar selesai
+            '--virtual-time-budget=5000',        // semua gambar sudah inline (data URI), tak perlu tunggu jaringan
             '--user-data-dir='.$profile,
             '--print-to-pdf='.$pdfFile,
             'file://'.$htmlFile,
