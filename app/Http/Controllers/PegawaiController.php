@@ -72,6 +72,8 @@ class PegawaiController extends Controller
         return $request->validate([
             'nip' => ['required', 'string', 'max:30', Rule::unique('pegawais', 'nip')->ignore($pegawai?->id)],
             'nama' => ['required', 'string', 'max:255'],
+            'jabatan' => ['nullable', 'string', 'max:255'],
+            'pangkat_golongan' => ['nullable', 'string', 'max:255'],
             'unit_kerja' => ['required', 'string', 'max:255'],
             'tanda_tangan' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
         ]);

@@ -7,6 +7,7 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\MasterPembiayaanController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SuratTugasController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -46,6 +47,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('kak/{kak}/docx/download', [KakController::class, 'downloadEditedDocx'])->name('kak.docx.download');
     Route::post('kak/{kak}/docx/upload', [KakController::class, 'uploadDocx'])->name('kak.docx.upload');
     Route::resource('kak', KakController::class);
+
+    // Surat Tugas (ST + SPD + Visum) + cetak.
+    Route::get('surat-tugas/{suratTugas}/pdf', [SuratTugasController::class, 'exportPdf'])->name('surat-tugas.pdf');
+    Route::get('surat-tugas/{suratTugas}/word', [SuratTugasController::class, 'exportWord'])->name('surat-tugas.word');
+    Route::post('surat-tugas/{suratTugas}/duplicate', [SuratTugasController::class, 'duplicate'])->name('surat-tugas.duplicate');
+    Route::resource('surat-tugas', SuratTugasController::class)->parameters(['surat-tugas' => 'suratTugas']);
 });
 
 Route::middleware('auth')->group(function () {

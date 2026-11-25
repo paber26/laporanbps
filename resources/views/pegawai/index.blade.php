@@ -15,6 +15,7 @@
                         <tr>
                             <th class="px-4 py-3">NIP</th>
                             <th class="px-4 py-3">Nama</th>
+                            <th class="px-4 py-3">Jabatan &amp; Pangkat/Gol.</th>
                             <th class="px-4 py-3">Unit Kerja</th>
                             <th class="px-4 py-3">TTD</th>
                             <th class="px-4 py-3 text-center">Laporan</th>
@@ -24,8 +25,14 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
                         @forelse ($pegawais as $p)
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                <td class="px-4 py-3 font-mono text-xs">{{ $p->nip }}</td>
-                                <td class="px-4 py-3">{{ $p->nama }}</td>
+                                <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">{{ $p->nip }}</td>
+                                <td class="px-4 py-3 font-medium">{{ $p->nama }}</td>
+                                <td class="px-4 py-3 text-xs">
+                                    <div>{{ $p->jabatan ?: '—' }}</div>
+                                    @if ($p->pangkat_golongan)
+                                        <div class="text-gray-500 dark:text-gray-400">{{ $p->pangkat_golongan }}</div>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">{{ $p->unit_kerja }}</td>
                                 <td class="px-4 py-3">
                                     @if ($p->tanda_tangan_path)
@@ -46,7 +53,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Belum ada pegawai.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Belum ada pegawai.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

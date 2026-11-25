@@ -17,6 +17,8 @@ class Pegawai extends Model
         'user_id',
         'nip',
         'nama',
+        'jabatan',
+        'pangkat_golongan',
         'unit_kerja',
         'tanda_tangan_path',
     ];
@@ -29,5 +31,10 @@ class Pegawai extends Model
     public function laporans(): HasMany
     {
         return $this->hasMany(Laporan::class);
+    }
+
+    public function suratTugas(): HasMany
+    {
+        return $this->hasMany(SuratTugas::class);
     }
 }

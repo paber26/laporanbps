@@ -32,6 +32,9 @@
                     <x-nav-link :href="route('kak.index')" :active="request()->routeIs('kak.*')">
                         {{ __('KAK') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('surat-tugas.index')" :active="request()->routeIs('surat-tugas.*')">
+                        {{ __('Surat Tugas') }}
+                    </x-nav-link>
                     <x-nav-link href="https://drive.google.com/drive/u/0/folders/197tXagiU0qyapO-ev3XAPpuSomVI6MmI" target="_blank">
                         {{ __('Drive') }}
                     </x-nav-link>
@@ -128,6 +131,9 @@
             @endif
             <x-responsive-nav-link :href="route('kak.index')" :active="request()->routeIs('kak.*')">
                 {{ __('KAK') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('surat-tugas.index')" :active="request()->routeIs('surat-tugas.*')">
+                {{ __('Surat Tugas') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link href="https://drive.google.com/drive/u/0/folders/197tXagiU0qyapO-ev3XAPpuSomVI6MmI" target="_blank">
                 {{ __('Drive') }}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Laporan;
 use App\Models\MasterPembiayaan;
 use App\Models\Pegawai;
+use App\Models\SuratTugas;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -206,12 +207,54 @@ class LaporanController extends Controller
 
     /**
      * Form pembuatan laporan baru.
+     * Mendukung query `?from_st={id}` untuk mengisi awal field dari Surat Tugas.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        $prefill = [];
+
+        if ($stId = $request->query('from_st')) {
+            $st = SuratTugas::with(['pembiayaan', 'rutes'])->find($stId);
+            if ($st) {
+                $uraians = $st->rutes->isNotEmpty()
+                    ? $st->rutes->map(fn ($r) => [
+                        'tanggal_kegiatan' => optional($r->tanggal_tiba)->format('Y-m-d'),
+                        'jam_mulai' => '08:00',
+                        'jam_selesai' => '16:00',
+                        'uraian_text' => '',
+                    ])->values()->all()
+                    : [[
+                        'tanggal_kegiatan' => optional($st->tanggal_berangkat)->format('Y-m-d'),
+                        'jam_mulai' => '08:00',
+                        'jam_selesai' => '16:00',
+                        'uraian_text' => '',
+                    ]];
+
+                $prefill = [
+                    'pegawai_id' => $st->pegawai_id,
+                    'judul_laporan' => 'Laporan Perjalanan Dinas '.$st->tujuan_kegiatan,
+                    'perihal_laporan' => $st->tujuan_kegiatan,
+                    'tujuan_surat' => $st->kepala_jabatan,
+                    'tempat_laporan' => $st->tempat_st,
+                    'tanggal_laporan' => optional($st->tanggal_kembali)->format('Y-m-d'),
+                    'lokasi_tujuan' => $st->lokasiRingkas(),
+                    'pembiayaan' => $st->pembiayaan ? [
+                        'program' => $st->pembiayaan->program,
+                        'kegiatan' => $st->pembiayaan->kegiatan,
+                        'ro' => $st->pembiayaan->ro,
+                        'komponen' => $st->pembiayaan->komponen,
+                        'akun' => $st->pembiayaan->akun,
+                    ] : [],
+                    'uraians' => $uraians,
+                    'from_st_nomor' => $st->nomor_st,
+                ];
+            }
+        }
+
         return view('laporan.create', [
             'pegawais' => Pegawai::orderBy('nama')->get(),
             'pembiayaans' => MasterPembiayaan::orderBy('program')->get(),
+            'prefill' => $prefill,
         ]);
     }
 

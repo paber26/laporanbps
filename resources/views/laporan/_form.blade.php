@@ -1,8 +1,9 @@
 @php
     /** @var \App\Models\Laporan|null $laporan */
     $isEdit = isset($laporan) && $laporan?->exists;
+    $prefill = $prefill ?? [];
 
-    // Baris uraian awal: prioritaskan old() (validasi gagal), lalu data model, lalu 1 baris kosong.
+    // Baris uraian awal: prioritaskan old() (validasi gagal), lalu data model, lalu prefill ST, lalu 1 baris kosong.
     $uraianRows = old('uraians');
     if ($uraianRows === null) {
         if ($isEdit && $laporan->uraians->count()) {
@@ -12,12 +13,14 @@
                 'jam_selesai' => $u->jam_selesai,
                 'uraian_text' => $u->uraian_text,
             ])->toArray();
+        } elseif (! empty($prefill['uraians'])) {
+            $uraianRows = $prefill['uraians'];
         } else {
             $uraianRows = [['tanggal_kegiatan' => '', 'jam_mulai' => '', 'jam_selesai' => '', 'uraian_text' => '']];
         }
     }
 
-    $val = fn ($field, $default = '') => old($field, $isEdit ? ($laporan->{$field} instanceof \Carbon\Carbon ? $laporan->{$field}->format('Y-m-d') : $laporan->{$field}) : $default);
+    $val = fn ($field, $default = '') => old($field, $isEdit ? ($laporan->{$field} instanceof \Carbon\Carbon ? $laporan->{$field}->format('Y-m-d') : $laporan->{$field}) : ($prefill[$field] ?? $default));
 
     // Kombinasi pembiayaan yang sudah ada untuk saran datalist bertingkat.
     $pembiayaanCombos = $pembiayaans->map(fn ($p) => [
@@ -71,7 +74,7 @@
         {{-- ===== Pembiayaan Kegiatan (bertingkat & bisa tambah baru) ===== --}}
         @php
             $pemb = $isEdit ? $laporan->pembiayaan : null;
-            $pv = fn ($f) => old($f, $pemb?->{$f} ?? '');
+            $pv = fn ($f) => old($f, $pemb?->{$f} ?? ($prefill['pembiayaan'][$f] ?? ''));
         @endphp
         <div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40 space-y-3">
             <div>

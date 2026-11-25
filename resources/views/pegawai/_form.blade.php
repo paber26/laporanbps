@@ -21,6 +21,18 @@
         <x-text-input id="nama" name="nama" type="text" class="mt-1 block w-full" :value="old('nama', $pegawai->nama ?? '')" required />
         <x-input-error :messages="$errors->get('nama')" class="mt-1" />
     </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <x-input-label for="jabatan" value="Jabatan" />
+            <x-text-input id="jabatan" name="jabatan" type="text" class="mt-1 block w-full" :value="old('jabatan', $pegawai->jabatan ?? '')" placeholder="mis: Statistisi Ahli Pertama" />
+            <x-input-error :messages="$errors->get('jabatan')" class="mt-1" />
+        </div>
+        <div>
+            <x-input-label for="pangkat_golongan" value="Pangkat / Golongan" />
+            <x-text-input id="pangkat_golongan" name="pangkat_golongan" type="text" class="mt-1 block w-full" :value="old('pangkat_golongan', $pegawai->pangkat_golongan ?? '')" placeholder="mis: Penata Muda Tk.I (III/b)" />
+            <x-input-error :messages="$errors->get('pangkat_golongan')" class="mt-1" />
+        </div>
+    </div>
     <div>
         <x-input-label for="unit_kerja" value="Unit Kerja / Asal Kantor BPS" />
         <x-text-input id="unit_kerja" name="unit_kerja" type="text" class="mt-1 block w-full" :value="old('unit_kerja', $pegawai->unit_kerja ?? '')" required />

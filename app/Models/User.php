@@ -74,6 +74,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Surat Tugas yang dibuat/dimiliki akun ini.
+     */
+    public function suratTugas(): HasMany
+    {
+        return $this->hasMany(SuratTugas::class);
+    }
+
+    /**
      * Apakah pengguna ini administrator (oversight penuh).
      *
      * Catatan: kolom `role` sengaja tidak masuk $fillable agar tidak bisa
