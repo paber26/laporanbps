@@ -300,7 +300,7 @@ class SuratTugasController extends Controller
 
             'rutes' => ['required', 'array', 'min:1', 'max:4'],
             'rutes.*.kecamatan_tujuan' => ['required', 'string', 'max:255'],
-            'rutes.*.tanggal_tiba' => ['required', 'date'],
+            'rutes.*.tanggal_tiba' => ['nullable', 'date'],
             'rutes.*.tanggal_berangkat' => ['nullable', 'date'],
         ]);
 
@@ -314,12 +314,17 @@ class SuratTugasController extends Controller
      */
     protected function syncRutes(SuratTugas $suratTugas, array $rutes): void
     {
+        $fallbackDate = $suratTugas->tanggal_berangkat?->format('Y-m-d') ?? now()->toDateString();
+
         foreach (array_values($rutes) as $idx => $rute) {
+            $tglTiba = ! empty($rute['tanggal_tiba']) ? $rute['tanggal_tiba'] : $fallbackDate;
+            $tglBerangkat = ! empty($rute['tanggal_berangkat']) ? $rute['tanggal_berangkat'] : $tglTiba;
+
             $suratTugas->rutes()->create([
                 'urutan' => $idx + 1,
                 'kecamatan_tujuan' => trim((string) $rute['kecamatan_tujuan']),
-                'tanggal_tiba' => $rute['tanggal_tiba'],
-                'tanggal_berangkat' => ! empty($rute['tanggal_berangkat']) ? $rute['tanggal_berangkat'] : $rute['tanggal_tiba'],
+                'tanggal_tiba' => $tglTiba,
+                'tanggal_berangkat' => $tglBerangkat,
             ]);
         }
     }

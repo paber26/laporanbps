@@ -54,11 +54,13 @@ class SuratTugasWordExporter
         $tp->setValue('mengingat', $mengingatToken);
 
         $nama = $suratTugas->pegawai?->nama ?? '';
+        $nip = trim((string) ($suratTugas->pegawai?->nip ?? ''));
         $jabatan = $suratTugas->jabatan ?: ($suratTugas->pegawai?->jabatan ?? '');
         $pangkat = $suratTugas->pangkat_golongan ?: ($suratTugas->pegawai?->pangkat_golongan ?? '-');
         $unitKerja = $suratTugas->unit_kerja ?: ($suratTugas->pegawai?->unit_kerja ?? config('laporan.surat_tugas.instansi'));
 
         $tp->setValue('nama', $nama);
+        $tp->setValue('nip_line', $nip !== '' ? 'NIP. '.$nip : '');
         $tp->setValue('jabatan', $jabatan);
         $tp->setValue('unit_kerja', $unitKerja);
         $tp->setValue('tujuan_kegiatan', $suratTugas->tujuan_kegiatan);
@@ -127,32 +129,15 @@ class SuratTugasWordExporter
         $firstRute = $rutes->get(0);
         $tp->setValue('visum_1_ke', $firstRute ? SuratTugas::formatKecamatan($firstRute->kecamatan_tujuan) : $suratTugas->tempat_tujuan);
 
+        // Kotak Visum tujuan (Blok II..N) dikosongkan untuk diisi & disahkan di lapangan.
         $totalSlots = max(2, min($rutes->count(), 4));
         for ($i = 0; $i < $totalSlots; $i++) {
-            $slot = $i + 2; // visum_2 = tujuan 1, visum_3 = tujuan 2, dst.
-            $rute = $rutes->get($i);
-            $nextRute = $rutes->get($i + 1);
-
-            if ($rute) {
-                $tujuanLabel = SuratTugas::formatKecamatan($rute->kecamatan_tujuan);
-                $keLabel = $nextRute
-                    ? SuratTugas::formatKecamatan($nextRute->kecamatan_tujuan)
-                    : $asalLabel;
-                $tglTiba = SuratTugas::formatTanggal($rute->tanggal_tiba);
-                $tglBerangkat = SuratTugas::formatTanggal($rute->tanggal_berangkat ?: $rute->tanggal_tiba);
-
-                $tp->setValue("visum_{$slot}_tiba_di", $tujuanLabel);
-                $tp->setValue("visum_{$slot}_tiba_tgl", $tglTiba);
-                $tp->setValue("visum_{$slot}_dari", $tujuanLabel);
-                $tp->setValue("visum_{$slot}_ke", $keLabel);
-                $tp->setValue("visum_{$slot}_berangkat_tgl", $tglBerangkat);
-            } else {
-                $tp->setValue("visum_{$slot}_tiba_di", '');
-                $tp->setValue("visum_{$slot}_tiba_tgl", '');
-                $tp->setValue("visum_{$slot}_dari", '');
-                $tp->setValue("visum_{$slot}_ke", '');
-                $tp->setValue("visum_{$slot}_berangkat_tgl", '');
-            }
+            $slot = $i + 2;
+            $tp->setValue("visum_{$slot}_tiba_di", '');
+            $tp->setValue("visum_{$slot}_tiba_tgl", '');
+            $tp->setValue("visum_{$slot}_dari", '');
+            $tp->setValue("visum_{$slot}_ke", '');
+            $tp->setValue("visum_{$slot}_berangkat_tgl", '');
         }
 
         $outPath = $dir.'/st-'.$suratTugas->id.'-'.uniqid().'.docx';

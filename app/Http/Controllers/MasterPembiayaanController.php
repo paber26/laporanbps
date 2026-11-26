@@ -6,6 +6,7 @@ use App\Models\MasterPembiayaan;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class MasterPembiayaanController extends Controller
 {
@@ -23,7 +24,10 @@ class MasterPembiayaanController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        MasterPembiayaan::create($this->validated($request));
+        $data = $this->validated($request);
+        $this->ensureUniqueCombination($data);
+
+        MasterPembiayaan::create($data);
 
         return redirect()->route('master-pembiayaan.index')->with('status', 'Data pembiayaan ditambahkan.');
     }
@@ -35,7 +39,10 @@ class MasterPembiayaanController extends Controller
 
     public function update(Request $request, MasterPembiayaan $masterPembiayaan): RedirectResponse
     {
-        $masterPembiayaan->update($this->validated($request));
+        $data = $this->validated($request);
+        $this->ensureUniqueCombination($data, $masterPembiayaan->id);
+
+        $masterPembiayaan->update($data);
 
         return redirect()->route('master-pembiayaan.index')->with('status', 'Data pembiayaan diperbarui.');
     }
@@ -52,12 +59,37 @@ class MasterPembiayaanController extends Controller
      */
     protected function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'program' => ['required', 'string', 'max:255'],
             'kegiatan' => ['required', 'string', 'max:255'],
             'ro' => ['required', 'string', 'max:255'],
             'komponen' => ['required', 'string', 'max:255'],
             'akun' => ['required', 'string', 'max:255'],
         ]);
+
+        return array_map(fn ($v) => trim((string) $v), $data);
+    }
+
+    /**
+     * Cegah penyimpanan kombinasi pembiayaan duplikat.
+     *
+     * @param  array<string, string>  $data
+     */
+    protected function ensureUniqueCombination(array $data, ?int $ignoreId = null): void
+    {
+        $exists = MasterPembiayaan::query()
+            ->where('program', $data['program'])
+            ->where('kegiatan', $data['kegiatan'])
+            ->where('ro', $data['ro'])
+            ->where('komponen', $data['komponen'])
+            ->where('akun', $data['akun'])
+            ->when($ignoreId !== null, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'program' => 'Kombinasi data pembiayaan tersebut sudah ada di Master Pembiayaan.',
+            ]);
+        }
     }
 }

@@ -369,11 +369,8 @@ class LaporanController extends Controller
             $new->judul_laporan = $new->judul_laporan . ' (Salinan)';
             // Salinan dimiliki oleh pengguna yang menduplikat (bukan pemilik asal).
             $new->user_id = $request->user()->id;
+            // Salinan tetap memakai pembiayaan_id asal (tanpa menggandakan master_pembiayaans).
             $new->save();
-
-            if ($laporan->pembiayaan) {
-                $new->pembiayaan()->create($laporan->pembiayaan->toArray());
-            }
 
             foreach ($laporan->uraians as $u) {
                 $new->uraians()->create($u->toArray());

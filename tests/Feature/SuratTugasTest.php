@@ -128,14 +128,19 @@ class SuratTugasTest extends TestCase
         $this->assertSame($user->id, $st->user_id);
         $this->assertCount(2, $st->rutes);
 
-        // Preview 3 halaman
+        // Preview 3 halaman: NIP pegawai tampil di SPD, "/ tiba ditempat baru *)" dihapus,
+        // Visum I tetap menampilkan tujuan pertama, dan kotak Visum tujuan dikosongkan.
         $this->actingAs($user)
             ->get(route('surat-tugas.show', $st))
             ->assertOk()
             ->assertSee('B-902/71050/KP.650/2026')
             ->assertSee('722/SPD_71050/2906/11/2026')
+            ->assertSee('Nama / NIP pegawai yang melaksanakan perjalanan dinas')
+            ->assertSee('NIP. 19980620 202104 2 003')
+            ->assertSee('Tanggal harus kembali')
+            ->assertDontSee('tiba ditempat baru')
             ->assertSee('Kecamatan Modoinding')
-            ->assertSee('Kecamatan Maesaan');
+            ->assertDontSee('Kecamatan Maesaan');
 
         // Daftar & pencarian
         $this->actingAs($user)
@@ -227,9 +232,30 @@ class SuratTugasTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\$\{[a-zA-Z0-9_]+\}/', $xml);
         $this->assertStringContainsString('B-902/71050/KP.650/2026', $xml);
         $this->assertStringContainsString('722/SPD_71050/2906/11/2026', $xml);
+        $this->assertStringContainsString('NIP. 19980620 202104 2 003', $xml);
+        $this->assertStringNotContainsString('tiba ditempat baru', $xml);
         $this->assertStringContainsString('Kecamatan Modoinding', $xml);
-        $this->assertStringContainsString('Kecamatan Maesaan', $xml);
-        $this->assertStringContainsString('Kecamatan Tompaso Baru', $xml);
+        // Kotak Visum tujuan (Blok II..N) dikosongkan untuk pengisian di lapangan.
+        $this->assertStringNotContainsString('Kecamatan Maesaan', $xml);
+        $this->assertStringNotContainsString('Kecamatan Tompaso Baru', $xml);
+    }
+
+    public function test_rute_visum_accepts_kecamatan_tujuan_without_dates(): void
+    {
+        $user = $this->makeUser();
+        $pegawai = $this->makePegawai();
+
+        $this->actingAs($user)
+            ->post(route('surat-tugas.store'), $this->validPayload($pegawai, null, [
+                'rutes' => [
+                    ['kecamatan_tujuan' => 'Sinonsayang'],
+                ],
+            ]))
+            ->assertRedirect();
+
+        $st = SuratTugas::with('rutes')->firstOrFail();
+        $this->assertCount(1, $st->rutes);
+        $this->assertSame('Sinonsayang', $st->rutes->first()->kecamatan_tujuan);
     }
 
     public function test_pdf_view_and_chrome_pdf_export_work(): void

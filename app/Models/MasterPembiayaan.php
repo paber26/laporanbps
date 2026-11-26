@@ -25,6 +25,11 @@ class MasterPembiayaan extends Model
         return $this->hasMany(Laporan::class, 'pembiayaan_id');
     }
 
+    public function suratTugas(): HasMany
+    {
+        return $this->hasMany(SuratTugas::class, 'pembiayaan_id');
+    }
+
     /**
      * Label ringkas untuk dropdown.
      */

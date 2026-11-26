@@ -18,15 +18,10 @@
         if ($isEdit && $suratTugas->rutes->isNotEmpty()) {
             $ruteRows = $suratTugas->rutes->map(fn ($r) => [
                 'kecamatan_tujuan' => $r->kecamatan_tujuan,
-                'tanggal_tiba' => optional($r->tanggal_tiba)->format('Y-m-d'),
-                'tanggal_berangkat' => optional($r->tanggal_berangkat)->format('Y-m-d'),
             ])->toArray();
         } else {
-            $today = now()->format('Y-m-d');
             $ruteRows = [[
                 'kecamatan_tujuan' => '',
-                'tanggal_tiba' => $today,
-                'tanggal_berangkat' => $today,
             ]];
         }
     }
@@ -331,38 +326,26 @@
                 <div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/40 space-y-3">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Rute Kecamatan Tujuan (Visum Halaman 3) *</h4>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Pilih dari 17 kecamatan Minahasa Selatan atau ketik bebas (mis. Kota Manado) untuk luar daerah. Maksimal 4 tujuan.</p>
+                            <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Tujuan Perjalanan (Visum Halaman 3) *</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Pilih dari 17 kecamatan Minahasa Selatan atau ketik bebas (mis. Kota Manado). Tujuan 1 tampil di Visum I; kotak Visum tujuan dikosongkan untuk diisi di lapangan.</p>
                         </div>
                         <button type="button" id="btn-add-rute"
-                                class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-md hover:bg-indigo-700">
+                                class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-md hover:bg-indigo-700 shrink-0">
                             + Tambah Tujuan
                         </button>
                     </div>
 
                     <div id="rutes-container" class="space-y-2.5">
                         @foreach ($ruteRows as $idx => $rute)
-                            <div class="rute-row grid grid-cols-1 md:grid-cols-12 gap-2 items-end bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
-                                <div class="md:col-span-5">
+                            <div class="rute-row flex items-end gap-2 bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
+                                <div class="flex-1">
                                     <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Kecamatan / Lokasi Tujuan <span class="rute-no">{{ $idx + 1 }}</span></label>
                                     <input type="text" name="rutes[{{ $idx }}][kecamatan_tujuan]" list="kecamatan-list"
                                            value="{{ $rute['kecamatan_tujuan'] ?? '' }}" required placeholder="mis: Modoinding"
                                            class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md text-sm">
                                 </div>
-                                <div class="md:col-span-3">
-                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tgl Tiba</label>
-                                    <input type="date" name="rutes[{{ $idx }}][tanggal_tiba]"
-                                           value="{{ $rute['tanggal_tiba'] ?? '' }}" required
-                                           class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md text-sm">
-                                </div>
-                                <div class="md:col-span-3">
-                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tgl Berangkat Lanjut</label>
-                                    <input type="date" name="rutes[{{ $idx }}][tanggal_berangkat]"
-                                           value="{{ $rute['tanggal_berangkat'] ?? '' }}"
-                                           class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 rounded-md text-sm">
-                                </div>
-                                <div class="md:col-span-1 text-right">
-                                    <button type="button" class="btn-remove-rute text-xs text-rose-600 dark:text-rose-400 hover:underline py-2">Hapus</button>
+                                <div class="text-right">
+                                    <button type="button" class="btn-remove-rute text-xs text-rose-600 dark:text-rose-400 hover:underline py-2 px-1">Hapus</button>
                                 </div>
                             </div>
                         @endforeach
@@ -580,10 +563,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const rows = container.querySelectorAll('.rute-row');
         if (rows.length >= 4) return;
         const clone = rows[rows.length - 1].cloneNode(true);
-        const defaultDate = inpTglKembali.value || inpTglBerangkat.value || '';
         clone.querySelectorAll('input').forEach(inp => {
-            if (inp.type === 'text') inp.value = '';
-            if (inp.type === 'date') inp.value = defaultDate;
+            inp.value = '';
         });
         container.appendChild(clone);
         reindexRutes();

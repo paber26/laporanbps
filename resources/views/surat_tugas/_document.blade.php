@@ -11,6 +11,7 @@
         : null;
 
     $nama = $suratTugas->pegawai?->nama ?? '';
+    $nip = trim((string) ($suratTugas->pegawai?->nip ?? ''));
     $jabatan = $suratTugas->jabatan ?: ($suratTugas->pegawai?->jabatan ?? '');
     $pangkat = $suratTugas->pangkat_golongan ?: ($suratTugas->pegawai?->pangkat_golongan ?? '-');
     $unitKerja = $suratTugas->unit_kerja ?: ($suratTugas->pegawai?->unit_kerja ?? config('laporan.surat_tugas.instansi'));
@@ -182,11 +183,16 @@
                         <td colspan="4" class="bt-thick bb-med br-thick">Pejabat Pembuat Komitmen</td>
                         <td colspan="3" class="bt-thick bb-med bl-thick">{{ $suratTugas->ppk_nama }}</td>
                     </tr>
-                    {{-- 2. Nama pegawai --}}
+                    {{-- 2. Nama / NIP pegawai --}}
                     <tr>
                         <td class="c-no bt-med bb-med">2.</td>
-                        <td colspan="4" class="bt-med bb-med br-thick">Nama pegawai yang melaksanakan perjalanan dinas</td>
-                        <td colspan="3" class="bt-med bb-med bl-thick">{{ $nama }}</td>
+                        <td colspan="4" class="bt-med bb-med br-thick">Nama / NIP pegawai yang melaksanakan perjalanan dinas</td>
+                        <td colspan="3" class="bt-med bb-med bl-thick">
+                            <div>{{ $nama }}</div>
+                            @if ($nip !== '')
+                                <div>NIP. {{ $nip }}</div>
+                            @endif
+                        </td>
                     </tr>
                     {{-- 3a, 3b, 3c --}}
                     <tr>
@@ -248,7 +254,7 @@
                     <tr>
                         <td class="bt-none bb-med"></td>
                         <td class="bt-none bb-med br-none">c.</td>
-                        <td colspan="3" class="bt-none bb-med bl-none br-thick">Tanggal harus kembali/ tiba ditempat baru *)</td>
+                        <td colspan="3" class="bt-none bb-med bl-none br-thick">Tanggal harus kembali</td>
                         <td colspan="3" class="bt-none bb-med bl-thick">{{ \App\Models\SuratTugas::formatTanggal($suratTugas->tanggal_kembali) }}</td>
                     </tr>
                     {{-- 8. Pengikut --}}
@@ -413,33 +419,23 @@
                         </td>
                     </tr>
 
-                    {{-- BLOK II..N: Rute Tujuan (minimal 2 kotak, dinamis sampai 4 tujuan) --}}
+                    {{-- BLOK II..N: Rute Tujuan (dikosongkan untuk diisi & disahkan di lapangan) --}}
                     @for ($i = 0; $i < $visumCount; $i++)
-                        @php
-                            $rute = $rutes->get($i);
-                            $nextRute = $rutes->get($i + 1);
-                            $tujuanLabel = $rute ? \App\Models\SuratTugas::formatKecamatan($rute->kecamatan_tujuan) : '';
-                            $keLabel = $rute
-                                ? ($nextRute ? \App\Models\SuratTugas::formatKecamatan($nextRute->kecamatan_tujuan) : $asalLabel)
-                                : '';
-                            $tglTiba = $rute ? \App\Models\SuratTugas::formatTanggal($rute->tanggal_tiba) : '';
-                            $tglBerangkat = $rute ? \App\Models\SuratTugas::formatTanggal($rute->tanggal_berangkat ?: $rute->tanggal_tiba) : '';
-                        @endphp
                         <tr>
                             <td class="v-bt v-bl">Tiba</td>
                             <td class="v-bt">:</td>
-                            <td class="v-bt">{{ $tujuanLabel }}</td>
+                            <td class="v-bt"></td>
                             <td class="v-bt v-bl">Berangkat dari</td>
                             <td class="v-bt">:</td>
-                            <td class="v-bt v-br">{{ $tujuanLabel }}</td>
+                            <td class="v-bt v-br"></td>
                         </tr>
                         <tr>
                             <td class="v-bl">Pada tanggal</td>
                             <td>:</td>
-                            <td>{{ $tglTiba }}</td>
+                            <td></td>
                             <td class="v-bl">Ke</td>
                             <td>:</td>
-                            <td class="v-br">{{ $keLabel }}</td>
+                            <td class="v-br"></td>
                         </tr>
                         <tr>
                             <td class="v-bl"></td>
@@ -447,7 +443,7 @@
                             <td></td>
                             <td class="v-bl">Pada tanggal</td>
                             <td>:</td>
-                            <td class="v-br">{{ $tglBerangkat }}</td>
+                            <td class="v-br"></td>
                         </tr>
                         <tr class="{{ $visumCount > 2 ? 'visum-blank-row-compact' : 'visum-blank-row' }}">
                             <td colspan="3" class="v-bl"></td>
